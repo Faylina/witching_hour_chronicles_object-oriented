@@ -44,6 +44,17 @@
 					debugSuccess('Output buffering has been successfully started.');							
 				}
 
+#*************************************************************************#
+
+				
+				#****************************************#
+				#********* INITIALIZE VARIABLES *********#
+				#****************************************#
+
+                $loggedIn   = false;
+                $errorLogin = NULL; 
+                $filterID   = NULL;
+
 #********************************************************************#
 /*
 
@@ -221,6 +232,125 @@
 		
 	</head>
 	<body>
+		<!-- ------------- NAVIGATION BEGIN --------------------------- -->
+
+        <nav class="navigation">
+
+            <!-- toggle navigation depending on the login status -->
+            <?php if ( $loggedIn === false ): ?>
+
+                <!-- ------------- LOGIN FORM BEGIN --------------------------- -->
+
+                <form action="" method="POST">
+                    <input type="hidden" name="loginForm">
+
+                    <fieldset>
+                        <legend>Author Login</legend>
+                        <div class="error"><?= $errorLogin ?></div>
+                        <input class="login-field" type="text" name="b1" placeholder="Email">
+                        <input class="login-field" type="password" name="b2" placeholder="Password">
+
+                        <input class="submit-button" type="submit" value="Login">
+                    </fieldset>
+                </form>
+
+                <!-- ------------- LOGIN FORM END ----------------------------- -->
+
+            <?php else: ?>
+
+                <!-- ------------- NAV LINKS BEGIN ---------------------------- -->
+
+                <a class="link" href="./dashboard.php"><< Dashboard</a>
+                <a class="link" href="?action=logout">Logout >></a>
+
+                <!-- ------------- NAV LINKS END ------------------------------ -->
+            <?php endif ?>
+
+        </nav>
+        <!-- ------------- NAVIGATION END ----------------------------- -->
+
+
+        <!-- ------------- HEADER BEGIN ------------------------------- -->
+        <header>
+
+            <img class="logo" src="./css/images/logo.png" alt="Parchment paper with a teal quill, a full moon in the background">
+            <div class="title">
+                <h1>Witching Hour Chronicles</h1>
+                <a href="index.php">Show all blog articles</a>   
+            </div>
+
+        </header>
+        <!-- ------------- HEADER END ---------------------------------- -->
+
+
+        <!-- ------------- MAIN CONTENT BEGIN -------------------------- -->
+
+        <div class="content">
+
+            <!-- ------------- BLOG BEGIN ---------------------------------- -->
+
+            <div class="blog">
+
+                <!-- -------- Generate blog articles ---------- -->
+                <?php foreach( $blogArray AS $value): ?>
+
+                    <!-- Convert ISO time from DB to EU time and split into date and time -->
+                    <?php $dateArray = isoToEuDateTime( $value['blogDate'] ) ?>
+
+                    <!-- Blog header -->
+                    <div class="blog-category">Category: <?= $value['catLabel'] ?></div>
+                    <div class="blog-title"><?= $value['blogHeadline'] ?></div>
+                    <div class="blog-meta">
+                        <?= $value['userFirstName'] ?> <?= $value['userLastName'] ?> (<?= $value['userCity'] ?>) 
+                        wrote on <?= $dateArray['date'] ?> at <?= $dateArray['time'] ?> o'clock:
+                    </div>
+
+                    <!-- Blog content -->
+                    <div class="container clearfix">
+                        <!-- Prevent empty images from displaying --> 
+                        <?php if( $value['blogImagePath'] !== NULL ): ?>
+                            <img class="<?= $value['blogImageAlignment']?>" src="<?= $value['blogImagePath']?>" alt="image for the blog article">
+                        <?php endif ?>
+
+                        <div class="blog-content"><?php echo nl2br( $value['blogContent'] ) ?></div>
+                    </div>
+
+                    <br>
+                    <hr>
+                    <br>
+
+                <?php endforeach ?>
+            </div>
+            <!-- ------------- BLOG END ------------------------------------ -->
+
+
+            <!-- ------------- CATEGORIES BEGIN ---------------------------- -->
+
+            <div class="categories">
+                <div class="blog-title">Categories</div>
+                <?php foreach( $categoryArray AS $value ): ?>
+                    <a href="?action=filterByCategory&catID=<?= $value['catID'] ?>"><?= $value['catLabel'] ?></a>
+                <?php endforeach ?>
+            </div>
+
+            <!-- ------------- CATEGORIES END ------------------------------ -->
+
+        </div>
+        <!-- ------------- MAIN CONTENT END -------------------------- -->
+
+
+        <!-- ------------- FOOTER BEGIN -------------------------------- -->
+        <footer>
+            <div class="footer-container">
+                <ul>
+                    <li>Copyright</li> 
+                    <li>&copy;</li> 
+                    <li>Faylina 2024</li>
+                </ul>
+                <div><strong>Disclaimer:</strong> All images, apart from the logo and background, were generated by AI.</div>
+            </div>
+        </footer>
+        <!-- ------------- FOOTER END ---------------------------------- -->
 
 	</body>
 </html>
