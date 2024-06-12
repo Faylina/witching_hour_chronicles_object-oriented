@@ -23,8 +23,8 @@
 				 *  the post was published and if the blog post 
 				 * contains an image, also the path to the image as 
 				 * well as its alignment. 
-				 * Moreover, this class a category object with a 
-				 * category ID and label and a user object with the
+				 * Moreover, this class a Category object with a 
+				 * category ID and label and a User object with the
 				 * name, email address, location, ID and password.
 				 */
 
