@@ -221,10 +221,10 @@
 				#********** VALIDATE LOGIN **********#
 				#************************************#
 				
-				session_name("wwwwitchinghourchroniclescom");
+				session_name("wwwwitchinghourchroniclesobjectcom");
 				
 				
-				#********** START/CONTINUE SESSION **********#
+				#********** START | CONTINUE SESSION **********#
 				if( session_start() === false ) {
 					// error
 					debugError('Error starting the session.');				

@@ -20,6 +20,7 @@
 				require_once('./include/db.inc.php');
 				require_once('./include/form.inc.php');
 				require_once('./include/dateTime.inc.php');
+				require_once('./include/debugging.inc.php');
 				
 				
 				#********** INCLUDE CLASSES **********#
@@ -28,6 +29,139 @@
 				require_once('./class/Blog.class.php');
 
 #***************************************************************************************#
+
+				#****************************************#
+				#********** SECURE PAGE ACCESS **********#
+				#****************************************#				
+
+				session_name('wwwwitchinghourchroniclesobjectcom');
+				
+				#********** START | CONTINUE SESSION	**********#
+
+				if( session_start() === false ) {
+					// error
+					debugError('Error starting the session.');			
+									
+				} else {
+					// success
+					debugSuccess('The session has been started successfully.');							
+
+					#*******************************************#
+					#********** CHECK FOR VALID LOGIN **********#
+					#*******************************************#	
+					
+
+					#********** A) NO VALID LOGIN **********#
+					if( isset($_SESSION['user']) === false OR $_SESSION['IPAddress'] !== $_SERVER['REMOTE_ADDR'] ) {
+						// error
+						debugAuth('User is not logged in.');	
+
+						#********** DENY PAGE ACCESS **********#
+
+						// 1. Delete session file
+						session_destroy();
+						
+						// 2. Redirect to homepage
+						header('LOCATION: index.php');
+						
+						// 3. Fallback in case of an error: end processing of the script
+						exit();
+					
+					#********** B) VALID LOGIN **********#
+					} else {
+						// success
+						debugAuth('Valid login.');				
+
+						session_regenerate_id(true);						
+						
+						// fetch user data from session
+
+						$loggedInUser = $_SESSION['user'];
+						
+					} // CHECK FOR VALID LOGIN END
+
+				} // SECURE PAGE ACCESS END
+
+
+#***************************************************************************************#	
+
+			
+				#******************************************#
+				#********** INITIALIZE VARIABLES **********#
+				#******************************************#
+				
+				#********* ERROR VARIABLES **************#
+				$errorCatLabel			= NULL;
+				$errorHeadline 			= NULL;
+				$errorImageUpload 		= NULL;
+				$errorContent 			= NULL;
+				
+				$dbError				= NULL;
+				$dbSuccess				= NULL;
+				$dbDeleteError          = NULL;
+                $dbDeleteSuccess        = NULL;
+                $info                   = NULL;
+                $alert                  = NULL;
+
+				#********* BLOG VARIABLES ***************#
+				$newCategory 			= NULL;
+				$newBlog 				= NULL;
+
+				#********* VIEW & EDIT VARIABLES ********#
+                $showView               = false;
+                $showEdit               = false;
+                $chosenBlog             = NULL;
+
+				#********* GENERATE LIST OF ALLOWED MIME TYPES *********#
+
+                $allowedMIMETypes       = implode(', ', array_keys(IMAGE_ALLOWED_MIME_TYPES));
+                $mimeTypes              = strtoupper( str_replace( array('image/jpeg, ', 'image/'), '', $allowedMIMETypes));
+
+
+#***************************************************************************************#
+
+	
+				#********************************************#
+				#********** PROCESS URL PARAMETERS **********#
+				#********************************************#
+
+				#********** PREVIEW GET ARRAY ***************#
+
+				debugArray('_GET', $_GET);
+				
+				// Step 1 URL: Check whether the parameters have been sent
+
+				if( isset($_GET['action']) ) {
+
+					debugProcessStart("URL-parameter 'action' has been committed.");
+								
+					// Step 2 URL: Read, sanitize and output URL data
+					debugProcessStart('The URL parameters are being read and sanitized...');
+
+					$action = sanitizeString($_GET['action']);
+
+					debugVariable('action', $action);
+
+					// Step 3 URL: Branching
+
+					#********** LOGOUT **********#
+					if( $_GET['action'] === 'logout' ) {
+						debugProcessStart('Logging out...');
+
+						// 1. Delete session file
+						session_destroy();
+
+						// 2. Reload homepage
+						header("Location: index.php");
+
+						// 3. Fallback in case of an error: end processing of the script
+						exit();
+
+					} // BRANCHING END
+					
+				} // PROCESS URL PARAMETERS END
+
+#***************************************************************************************#				
 ?>
 
 <!DOCTYPE html>
@@ -38,7 +172,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
         <link rel="icon" type="image/x-icon" href="./css/images/favicon.ico">
-        <title>Witching Hour Chronicles - Homepage</title>
+        <title>Witching Hour Chronicles - Dashboard</title>
         <link rel="stylesheet" href="./css/main.css">
 		<link rel="stylesheet" href="./css/debug.css">
     </head>
@@ -67,7 +201,7 @@
             <img class="logo" src="./css/images/logo.png" alt="Parchment paper with a teal quill, a full moon in the background">
             <div class="title">
                 <h1>Witching Hour Chronicles</h1>
-                <div class="active-user">Happy writing, <?= $userFirstName ?> <?= $userLastName ?>!</div>
+                <div class="active-user">Happy writing, <?= $loggedInUser->getUserFullName() ?>!</div>
             </div>
 
         </header>
