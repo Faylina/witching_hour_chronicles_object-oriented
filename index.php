@@ -314,7 +314,7 @@
 						debugError('The login form contains errors!');		
 						
 						// neutral user message
-						$loginError = 'Invalid email or password.';
+						$errorLogin = 'Invalid email or password.';
 											
 					} else {
 						// success
@@ -346,7 +346,7 @@
 							debugError('The email could not be found in the database!');
 												
 							// neutral user message
-							$loginError = 'Invalid email or password.';
+							$errorLogin = 'Invalid email or password.';
 						
 						} else {
 							// success
@@ -359,7 +359,7 @@
 								debugError('The password in the form does not match the password in the database!');
 					
 								// neutral user message
-								$loginError = 'Invalid email or password.';
+								$errorLogin = 'Invalid email or password.';
 													
 							} else {
 								// success
@@ -371,7 +371,7 @@
 									// error
 									debugError('Error starting session!');		
 					
-									$loginError = 'Login is not possible. Please allow cookies in your browser.';
+									$errorLogin = 'Login is not possible. Please allow cookies in your browser.';
 															
 									// error message for admin
 									$logErrorForAdmin = 'Error during login process.';
@@ -579,7 +579,7 @@
                 <!-- ------------- LOGIN FORM BEGIN --------------------------- -->
 
                 <form action="" method="POST">
-                    <input type="hidden" name="loginForm">
+                    <input type="hidden" name="formLogin">
 
                     <fieldset>
                         <legend>Author Login</legend>
