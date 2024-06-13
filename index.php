@@ -472,14 +472,18 @@
 					debugVariable('action', $action);
 
 					// Step 3 URL: Branching
-												
-												
+													
 					#********** LOGOUT **********#					
 					if( $_GET['action'] === 'logout' ) {
 						debugProcessStart('Logging out...');
-											
+						
+						// 1. Delete session file
 						session_destroy();
+
+						// 2. Reload homepage
 						header("Location: index.php");
+
+						// 3. Fallback in case of an error: end processing of the script
 						exit();
 					
 
@@ -522,6 +526,29 @@
 					} // BRANCHING END
 
 				} // PROCESS URL PARAMETERS END
+
+
+#***************************************************************************************#
+
+
+				#************************************************#
+				#********** FETCH BLOG ENTRIES FROM DB **********#
+				#************************************************#
+
+				debugProcessStart("Fetching blog posts from database...");	
+
+				#****************************************#
+				#********** DB OPERATION ****************#
+				#****************************************#
+				
+				// Step 1 DB: Connect to database
+				$PDO = dbConnect();
+
+				// Step 2 + 3 DB
+				$blogObjectsArray = Blog::fetchFromDB($PDO, $filterID);
+
+				// Step 4 DB: disconnect from DB
+				dbClose($PDO);
 
 #***************************************************************************************#
 
@@ -601,35 +628,41 @@
 
             <div class="blog">
 
-                <!-- -------- Generate blog articles ---------- -->
-                <?php foreach( $blogArray AS $value): ?>
+				<?php if( empty($blogObjectsArray) === true ): ?>
+					<p>No blog posts have been written yet. Get creative!</p>
+				
+				<?php else: ?>
 
-                    <!-- Convert ISO time from DB to EU time and split into date and time -->
-                    <?php $dateArray = isoToEuDateTime( $value['blogDate'] ) ?>
+					<!-- -------- Generate blog articles ---------- -->
+					<?php foreach( $blogObjectsArray AS $blogObject): ?>
 
-                    <!-- Blog header -->
-                    <div class="blog-category">Category: <?= $value['catLabel'] ?></div>
-                    <div class="blog-title"><?= $value['blogHeadline'] ?></div>
-                    <div class="blog-meta">
-                        <?= $value['userFirstName'] ?> <?= $value['userLastName'] ?> (<?= $value['userCity'] ?>) 
-                        wrote on <?= $dateArray['date'] ?> at <?= $dateArray['time'] ?> o'clock:
-                    </div>
+						<!-- Convert ISO time from DB to EU time and split into date and time -->
+						<?php $dateArray = isoToUSDateTime( $blogObject->getBlogDate() ) ?>
 
-                    <!-- Blog content -->
-                    <div class="container clearfix">
-                        <!-- Prevent empty images from displaying --> 
-                        <?php if( $value['blogImagePath'] !== NULL ): ?>
-                            <img class="<?= $value['blogImageAlignment']?>" src="<?= $value['blogImagePath']?>" alt="image for the blog article">
-                        <?php endif ?>
+						<!-- Blog header -->
+						<div class="blog-category">Category: <?= $blogObject->getCategory()->getCatLabel() ?></div>
+						<div class="blog-title"><?= $blogObject->getBlogHeadline() ?></div>
+						<div class="blog-meta">
+							<?= $blogObject->getUserFullName() ?> (<?= $blogObject->getUser()->getUserCity() ?>) 
+							wrote on <?= $dateArray['date'] ?> at <?= $dateArray['time'] ?> o'clock:
+						</div>
 
-                        <div class="blog-content"><?php echo nl2br( $value['blogContent'] ) ?></div>
-                    </div>
+						<!-- Blog content -->
+						<div class="container clearfix">
+							<!-- Prevent empty images from displaying --> 
+							<?php if( $blogObject->getBlogImagePath() !== NULL ): ?>
+								<img class="<?= $blogObject->getBlogImageAlignment() ?>" src="<?= $blogObject->getBlogImagePath() ?>" alt="image for the blog article">
+							<?php endif ?>
 
-                    <br>
-                    <hr>
-                    <br>
+							<div class="blog-content"><?php echo nl2br( $blogObject->getBlogContent() ) ?></div>
+						</div>
 
-                <?php endforeach ?>
+						<br>
+						<hr>
+						<br>
+
+					<?php endforeach ?>
+				<?php endif ?>
             </div>
             <!-- ------------- BLOG END ------------------------------------ -->
 
