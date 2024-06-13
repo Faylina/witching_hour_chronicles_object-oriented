@@ -292,7 +292,7 @@ h1 {
     cursor: pointer;
 }
 
-.active {
+.categories .active {
     text-decoration: underline;
 }
 

@@ -446,6 +446,83 @@
 				// Step 4 DB: close DB connection
 				dbClose($PDO);
 
+
+#***************************************************************************************#
+
+			
+				#********************************************#
+				#********** PROCESS URL PARAMETERS **********#
+				#********************************************#
+
+				#********** PREVIEW GET ARRAY ***************#
+
+				debugArray('_GET', $_GET);
+				
+				// Step 1 URL: Check whether the parameters have been sent
+
+				if( isset($_GET['action']) === true ) {
+
+					debugProcessStart("URL-parameter 'action' has been committed.");		
+					
+					// Step 2 URL: Read, sanitize and output URL data
+					debugProcessStart('The URL parameters are being read and sanitized...');
+					
+					$action = sanitizeString($_GET['action']);
+					
+					debugVariable('action', $action);
+
+					// Step 3 URL: Branching
+												
+												
+					#********** LOGOUT **********#					
+					if( $_GET['action'] === 'logout' ) {
+						debugProcessStart('Logging out...');
+											
+						session_destroy();
+						header("Location: index.php");
+						exit();
+					
+
+					#********** FILTER BY CATEGORY **********#					
+					} elseif( $action === 'filterByCategory' ) {
+						debugProcessStart("The blog posts are being filtered by category...");		
+																		
+						#********** FETCH SECOND URL PARAMETER **********#
+						if( isset($_GET['catID']) === true ) {
+
+							debugProcessStart("URL-parameter 'catID' has been committed.");
+
+							// Read, sanitize and output URL data
+							debugProcessStart('The URL parameters are being read and sanitized...');
+							
+							// $catLabel = NULL, $catID = NULL
+							$categoryFilterObject = new Category(catID:$_GET['catID']);
+
+							debugObject('categoryFilterObject', $categoryFilterObject);
+												
+							#****** WHITELISTING: CHECK WHETHER CATEGORY ID EXISTS IN DB *********#
+					
+							if( array_key_exists($categoryFilterObject->getCatID(), $allCategoryObjectsArray) === false ) {
+								// error
+								debugError('This category does not exist in the database.');
+
+								$categoryFilterObject = NULL;
+
+								header("Location: index.php");
+
+							} else {
+								// success
+								debugSuccess('This category exists in the database.');
+					
+								$filterID = $categoryFilterObject->getCatID();
+							}
+							
+						} // FETCH SECOND URL PARAMETER END
+
+					} // BRANCHING END
+
+				} // PROCESS URL PARAMETERS END
+
 #***************************************************************************************#
 
 
