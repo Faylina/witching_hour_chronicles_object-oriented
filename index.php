@@ -421,6 +421,31 @@
 
 			} // PROCESS FORM LOGIN END
 
+
+#***************************************************************************************#
+
+
+				#**********************************************#
+				#********** FETCH CATEGORIES FROM DB **********#
+				#**********************************************#
+
+				debugProcessStart('Fetching categories...');
+
+				#****************************************#
+				#********** DB OPERATION ****************#
+				#****************************************#
+
+				// Step 1 DB: Connect to database
+
+				$PDO = dbConnect();	
+
+				// Step 2 + 3 DB
+
+				$allCategoryObjectsArray = Category::fetchAllFromDB($PDO);
+
+				// Step 4 DB: close DB connection
+				dbClose($PDO);
+
 #***************************************************************************************#
 
 
@@ -536,9 +561,17 @@
 
             <div class="categories">
                 <div class="blog-title">Categories</div>
-                <?php foreach( $categoryArray AS $value ): ?>
-                    <a href="?action=filterByCategory&catID=<?= $value['catID'] ?>"><?= $value['catLabel'] ?></a>
-                <?php endforeach ?>
+
+				<?php if( empty($allCategoryObjectsArray) === true ): ?>
+					<p>There are no categories yet. Go ahead and create some. :&#41;</p>
+			
+				<?php else: ?>
+					<?php foreach( $allCategoryObjectsArray AS $categoryObject ): ?>
+						<a href="?action=filterByCategory&catID=<?= $categoryObject->getCatID() ?>" 
+						<?php if( $categoryObject->getCatID() == $filterID ) echo 'class="active"' ?>>
+							<?= $categoryObject->getCatLabel() ?></a>
+					<?php endforeach ?>
+				<?php endif ?>
             </div>
 
             <!-- ------------- CATEGORIES END ------------------------------ -->

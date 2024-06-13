@@ -292,6 +292,10 @@ h1 {
     cursor: pointer;
 }
 
+.active {
+    text-decoration: underline;
+}
+
 
 /********** USER MESSAGES ***********/
 
