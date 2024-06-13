@@ -44,17 +44,6 @@
 					debugSuccess('Output buffering has been successfully started.');							
 				}
 
-#*************************************************************************#
-
-				
-				#****************************************#
-				#********* INITIALIZE VARIABLES *********#
-				#****************************************#
-
-                $loggedIn   = false;
-                $errorLogin = NULL; 
-                $filterID   = NULL;
-
 #********************************************************************#
 /*
 
@@ -214,8 +203,227 @@
 				#*******************************************************************#
 */
 
+#*************************************************************************#
+
+				
+				#****************************************#
+				#********* INITIALIZE VARIABLES *********#
+				#****************************************#
+
+                $loggedIn   = false;
+                $errorLogin = NULL; 
+                $filterID   = NULL;
+
+
+#*******************************************************************************************#
+
+				#************************************#
+				#********** VALIDATE LOGIN **********#
+				#************************************#
+				
+				session_name("wwwwitchinghourchroniclescom");
+				
+				
+				#********** START/CONTINUE SESSION **********#
+				if( session_start() === false ) {
+					// error
+					debugError('Error starting the session.');				
+									
+				} else {
+					// success
+					debugSuccess('The session has been started successfully.');		
+
+					#*******************************************#
+					#********** CHECK FOR VALID LOGIN **********#
+					#*******************************************#
+
+					
+					#********** A) NO VALID LOGIN **********#				
+					if( isset($_SESSION['user']) === false OR $_SESSION['IPAddress'] !== $_SERVER['REMOTE_ADDR'] ) {
+						// error
+						debugAuth('User is not logged in.');			
+
+						#************ DENY PAGE ACCESS ***********#
+						session_destroy();
+						
+						#************ FLAG AS LOGGED OUT *********#
+						$loggedIn = false;
+					
+					
+					#********** B) VALID LOGIN **********#
+					} else {
+						// success
+						debugAuth('Valid login.');			
+					
+						#************ GENERATE NEW SESSION ID ***********#
+						session_regenerate_id(true);
+								
+						#************ FLAG AS LOGGED IN *****************#
+						$loggedIn = true;
+						
+					} // CHECK FOR VALID LOGIN END
+					
+				} // VALIDATE LOGIN END
+
+
+#*******************************************************************************************#
+
+
+				#****************************************#
+				#********** PROCESS FORM LOGIN **********#
+				#****************************************#
+				
+				#********** PREVIEW POST ARRAY **********#
+
+				debugArray('_POST', $_POST);
+
+				#****************************************#
+						
+				// Step 1 FORM: Check whether the form has been sent
+
+				if( isset($_POST['formLogin']) === true ) {
+					debugProcessStart('The form "loginForm" has been sent.');
+										
+					// Step 2 FORM: Read, sanitize and output form data
+					debugProcessStart('Reading and sanitizing form data...');
+					
+					/*
+						$userFirstName 	= NULL,
+						$userLastName 	= NULL,
+						$userEmail 		= NULL,
+						$userCity 		= NULL,
+						$userPassword 	= NULL,
+						$userID 		= NULL
+					*/
+
+					$userLogin 	= new User(userEmail:$_POST['b1']);
+					$password 	= sanitizeString($_POST['b2']);
+
+					debugObject('userLogin', $userLogin);
+					
+					// Step 3 FORM: Field validation
+					debugProcessStart('Validating fields...');
+					
+					$errorLoginEmail 		= validateEmail($userLogin->getUserEmail());
+					$errorLoginPassword 	= validateInputString($password);
+					
+					
+					#********** FINAL FORM VALIDATION **********#					
+					if( $errorLoginEmail !== NULL OR $errorLoginPassword !== NULL ) {
+						// error
+						debugError('The login form contains errors!');		
+						
+						// neutral user message
+						$loginError = 'Invalid email or password.';
+											
+					} else {
+						// success
+						debugSuccess('The form is formally free of errors.');					
+														
+						// Step 4 FORM: data processing
+					
+						#**********************************#
+						#********** DB OPERATION **********#
+						#**********************************#
+						
+						#********** FETCH USER DATA FROM DB BY EMAIL **********#	
+					
+						// Step 1 DB: Connect to database
+						$PDO = dbConnect();
+					
+						// Step 2 + 3 DB 
+						$userObjectFromDB = $userLogin->fetchFromDB($PDO);
+					
+						// Step 4 DB: close DB connection
+						dbClose($PDO);
+
+						debugObject('userObjectFromDB', $userObjectFromDB);
+					
+						#********** VERIFY LOGIN EMAIL **********#			
+					
+						if( $userObjectFromDB === false ) {
+							// error
+							debugError('The email could not be found in the database!');
+												
+							// neutral user message
+							$loginError = 'Invalid email or password.';
+						
+						} else {
+							// success
+							debugSuccess('The email has been found in the database.');
+																			
+							#********** VERIFY PASSWORD **********#
+													
+							if( password_verify( $password, $userObjectFromDB->getUserPassword()) === false ) {
+								// error
+								debugError('The password in the form does not match the password in the database!');
+					
+								// neutral user message
+								$loginError = 'Invalid email or password.';
+													
+							} else {
+								// success
+								debugSuccess('The password in the form matches the password in the database.');
+																
+								#********** START SESSION **********#
+					
+								if( session_start() === false ) {
+									// error
+									debugError('Error starting session!');		
+					
+									$loginError = 'Login is not possible. Please allow cookies in your browser.';
+															
+									// error message for admin
+									$logErrorForAdmin = 'Error during login process.';
+					
+									#******** WRITE TO ERROR LOG ******#
+							
+									// create file
+							
+									if( file_exists('./logdocs') === false ) {
+										mkdir('./logdocs');
+									}
+							
+									// create error message
+							
+									$logEntry    = "\t<p>";
+									$logEntry   .= date('Y-m-d | h:i:s |');
+									$logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+									$logEntry   .= '<i>' . $logErrorForAdmin . '</i>';
+									$logEntry   .= "</p>\n";
+							
+									// put error message into the error log
+							
+									file_put_contents('./logdocs/error_log.html', $logEntry, FILE_APPEND);
+															
+								} else {
+									// success
+									debugSuccess('The session has been started successfully.');		
+																								
+									#********** SAVE USER DATA INTO SESSION **********#
+					
+									debugProcessStart('Writing user data to session...');
+														
+									$_SESSION['IPAddress'] 		= $_SERVER['REMOTE_ADDR'];
+									$_SESSION['user']			= $userObjectFromDB;
+									
+									#********** REDIRECT TO DASHBOARD **********#
+
+									header('Location: dashboard.php');
+
+								} // START SESSION END
+
+							} // VERIFY PASSWORD END
+
+					} // VERIFY LOGIN NAME END
+
+				} // FINAL FORM VALIDATION END
+
+			} // PROCESS FORM LOGIN END
 
 #***************************************************************************************#
+
+
 ?>
 
 <!DOCTYPE html>
