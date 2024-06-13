@@ -91,11 +91,11 @@
 				#******************************************#
 				
 				#********* ERROR VARIABLES **************#
-				$errorCatLabel			= NULL;
+				$errorCategory			= NULL;
 				$errorHeadline 			= NULL;
 				$errorImageUpload 		= NULL;
 				$errorContent 			= NULL;
-				
+
 				$dbError				= NULL;
 				$dbSuccess				= NULL;
 				$dbDeleteError          = NULL;
@@ -160,6 +160,134 @@
 					} // BRANCHING END
 					
 				} // PROCESS URL PARAMETERS END
+
+
+#***************************************************************************************#			
+	
+				#*************************************************#
+				#********** PROCESS FORM 'NEW CATEGORY' **********#
+				#*************************************************#
+
+				#********** PREVIEW POST ARRAY **********#
+
+				debugArray('_POST', $_POST);
+
+				// Step 1 FORM: Check whether the form has been sent
+				if( isset($_POST['formNewCategory']) === true ) {
+
+					debugProcessStart('The form "formNewCategory" has been sent.');						
+												
+					// Step 2 FORM: Read, sanitize and output form data
+					debugProcessStart('Reading and sanitizing form data...');
+					
+					$newCategory = new Category($_POST['b5']);
+
+					debugObject('newCategory', $newCategory);
+					
+					// Step 3 FORM: Field validation
+					debugProcessStart('Validating fields...');
+					
+					$errorCategory = validateInputString($newCategory->getCatLabel(), maxLength: 50);
+					
+					#********** CHECK IF CATEGORY NAME ALREADY EXISTS **********#
+					
+					#****************************************#
+					#********** DB OPERATION ****************#
+					#****************************************#
+					
+					// Step 1 DB: Connect to database
+					
+					$PDO = dbConnect();
+					
+					// Step 2 + 3 DB
+					
+					$categoryCheck = $newCategory->checkIfExists($PDO);
+					
+					// Step 4 DB: evaluate the DB-operation and close the DB connection
+					
+					if( $categoryCheck !== 0 ) {
+						// error
+						debugError("The category {$newCategory->getCatLabel()} already exists.");
+					
+						$errorCategory = 'This category already exists.'; 
+					}
+
+					dbClose($PDO);
+
+					#********** FINAL FORM VALIDATION **********#
+					if( $errorCategory !== NULL ) {
+						// error
+						debugError('The form contains errors!');
+
+					} else {
+						// success
+						debugSuccess('The form is formally free of errors.');						
+					
+						// Step 4 FORM: data processing
+										
+						#********** SAVE CATEGORY TO DB **********#
+
+						#****************************************#
+						#********** DB OPERATION ****************#
+						#****************************************#
+					
+						// Step 1 DB: Connect to database
+					
+						$PDO = dbConnect();
+					
+						// Step 2 + 3 DB
+					
+						$rowCount = $newCategory->saveToDB($PDO);
+					
+						// Step 4 DB: evaluate the DB-operation and close the DB connection
+					
+						if( $rowCount !== 1 ) {
+							// error
+							debugErrorDB("Error when attempting to save $rowCount category!");
+					
+							$dbError = 'An error has occurred! Please try again later.';
+					
+							// error message for admin
+							$logErrorForAdmin = 'Error attempting to save a new category.';
+					
+							#******** WRITE TO ERROR LOG ******#
+					
+							// create folder
+					
+							if( file_exists('./logfiles') === false ) {
+								mkdir('./logfiles');
+							}
+					
+							// create error message
+					
+							$logEntry    = "\t<p>";
+							$logEntry   .= date('Y-m-d | h:i:s |');
+							$logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+							$logEntry   .= '<i>' . $logErrorForAdmin . '</i>';
+							$logEntry   .= "</p>\n";
+					
+							// write error message to log
+					
+							file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+										
+						} else {
+							// success								
+							$newCategory->setCatID($PDO->lastInsertId());
+
+							debugSuccess("The category {$newCategory->getCatLabel()} has been saved under the ID {$newCategory->getCatID()}.");
+					
+							$dbSuccess = "The category {$newCategory->getCatLabel()} has been saved successfully.";
+													
+							// clear the form
+							$newCategory = NULL;
+												
+						} // SAVE CATEGORY TO DB END
+					
+						dbClose($PDO);
+					
+					} // FINAL FORM VALIDATION END
+
+				} // PROCESS FORM 'NEW CATEGORY' END
 
 #***************************************************************************************#				
 ?>
@@ -547,11 +675,11 @@
 
                     <div class="form-heading">Create a new category</div>
                     
-                    <input type="hidden" name="categoryForm">
+                    <input type="hidden" name="formNewCategory">
                     <br>
                     <label for="b5">Name the new category</label>
                     <div class="error"><?= $errorCategory ?></div>
-                    <input type="text" class="form-text" name="b5" id="b5" placeholder="Category name" value="<?= $newCategory ?>">
+                    <input type="text" class="form-text" name="b5" id="b5" placeholder="Category name" value="<?= $newCategory?->getCatLabel() ?>">
                     <br>
                     <input type="submit" class="form-button" value="Create category">
 
