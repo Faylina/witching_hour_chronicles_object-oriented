@@ -157,6 +157,100 @@
 						// 3. Fallback in case of an error: end processing of the script
 						exit();
 
+
+					#*************** DELETION **************#
+
+					} elseif( $action === 'delete') {
+
+                        debugProcessStart('Deleting data from database...');
+
+						// fetch the blogID of the post to be deleted
+
+						/*
+							$blogHeadline 		= NULL,
+							$blogImagePath 		= NULL,
+							$blogImageAlignment = NULL,
+							$blogContent 		= NULL,
+							$blogDate 			= NULL,
+							$category 			= new Category(),
+							$user 				= new User(),
+							$blogID 			= NULL
+						*/
+
+						$chosenBlog = new Blog(blogID: $_SESSION['postToBeDeleted']);
+
+                        #****************************************#
+                        #************ DB OPERATIONS *************#
+                        #****************************************#
+
+                        // Step 1 DB: Connect to database
+
+                        $PDO = dbConnect();
+
+                        // Step 2 + 3 DB
+
+                        $rowCount = $chosenBlog->deleteFromDB($PDO);
+
+						// Step 4 DB: evaluate the DB-operation and close the DB connection
+                        debugVariable('rowCount', $rowCount);
+                        
+                        if( $rowCount !== 1 ) {
+                            // error
+                            debugErrorDB('Deletion failed!');	
+                        
+                            // error message for user
+                            $dbDeleteError = 'The blog post could not be deleted. Please try again later.';
+
+                            // error message for admin
+                            $logError   = 'Error trying to DELETE a BLOG POST to database.';
+
+                            /******** WRITE TO ERROR LOG ******/
+
+                            // create file
+
+                            if( file_exists('./logfiles') === false ) {
+                                mkdir('./logfiles');
+                            }
+                        
+                            // create error message
+
+                            $logEntry    = "\t<p>";
+                            $logEntry   .= date('Y-m-d | h:i:s |');
+                            $logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+                            $logEntry   .= '<i>' . $logError . '</i>';
+                            $logEntry   .= "</p>\n";
+
+                            // write error message to log
+
+                            file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+
+                        
+                        } else {
+                            // success
+                            debugSuccess("$rowCount blog post has been successfully deleted.");
+                        
+                            $dbDeleteSuccess = 'The blog post has been successfully deleted.';
+
+                        }
+                        
+                        // close DB connection
+                        dbClose($PDO);
+
+
+                    #*************** CONFIRMATIONS **************#
+                    
+                    } elseif( $action === 'cancelDelete' OR $action = 'okay') {
+                        debugProcessStart('Reloading page after cancel or confirmation...');
+
+                        // delete blog ID from session
+                        $_SESSION['postToBeDeleted'] = '';
+
+                        // 2. Reload homepage
+                        header('LOCATION: dashboard.php');
+
+                        // 3. Fallback in case of an error: end processing of the script
+                        exit();
+
 					} // BRANCHING END
 					
 				} // PROCESS URL PARAMETERS END
@@ -319,7 +413,7 @@
 
 
 				#***************************************************#
-				#********** PROCESS FORM 'NEW BLOG ENTRY' **********#
+				#********** PROCESS FORM 'NEW BLOG POST' **********#
 				#***************************************************#
 
 				#********** PREVIEW POST ARRAY **********#
@@ -512,7 +606,165 @@
 
 					} // FINAL FORM VALIDATION PART I (FIELDS VALIDATION) END
 
-				} // PROCESS FORM 'NEW BLOG ENTRY' END
+				} // PROCESS FORM 'NEW BLOG POST' END
+		
+
+#***************************************************************************************#
+
+
+				#************************************************#
+				#********** FETCH BLOG ENTRIES FROM DB **********#
+				#************************************************#
+
+				debugProcessStart("Fetching blog posts from database...");	
+
+				#****************************************#
+				#********** DB OPERATION ****************#
+				#****************************************#
+				
+				// Step 1 DB: Connect to database
+				$PDO = dbConnect();
+
+				// Step 2 + 3 DB
+				$blogObjectsArray = Blog::fetchFromDB($PDO);
+
+				// Step 4 DB: disconnect from DB
+				dbClose($PDO);
+
+
+#*************************************************************************#
+
+
+                #********************************************#
+				#******** PROCESS VIEW & EDIT FORM **********#
+				#********************************************#
+
+                #******** PREVIEW POST ARRAY ****************#
+
+                debugArray('_POST', $_POST);
+
+                // Step 1 FORM: Check whether the form has been sent
+
+                if( isset($_POST['previousPostsForm']) === true ) {
+                    debugProcessStart('The form "previousPostsForm" has been sent.');
+					
+					// Step 2 FORM: Read, sanitize and output form data
+					debugProcessStart('Reading and sanitizing form data...');
+                    
+					$chosenBlog = new Blog(blogID:$_POST['b6']);
+                    $operation  = sanitizeString($_POST['b7']);
+
+                    debugObject('chosenBlog', $chosenBlog);
+                    debugVariable('operation', $operation);
+                    
+                    // Step 3 FORM: Field validation
+                    debugProcessStart('Validating fields...');
+                    
+                    $errorChosenBlog    = validateInputString($chosenBlog->getBlogID(), maxLength:11);
+                    $errorOperation     = validateInputString($operation, minLength:4, maxLength:6);
+
+					#********** WHITELISTING OPERATION **********#
+
+					if(	$operation !== 'view' AND 
+						$operation !== 'edit' AND 
+						$operation !== 'delete') 
+					{
+						$errorOperation = 'This is not a valid operation.';
+					}
+                    
+
+                    #********** FINAL FORM VALIDATION **********#
+                    
+                    if( $errorChosenBlog !== NULL OR $errorOperation !== NULL ) {
+                        // error
+                        debugError('The form contains errors!');
+                    
+                    } else {
+                        //success
+                        debugSuccess('The form is formally free of errors.');	
+                    
+                        // Step 4 FORM: data processing
+
+                        #************ VIEW POST ************************#
+
+                        if( $operation === 'view' ) {
+                            debugProcessStart('Showing blog post...');
+
+                            $showView = true; 
+
+
+                        #************ START EDITING PROCESS *************#
+
+                        } elseif( $operation === 'edit' ) {
+                            debugProcessStart('Starting editing process...');
+
+                            #********* USER AUTHORIZATION **********#
+
+                            foreach( $blogObjectsArray AS $blogObject ) {
+
+                                // find the blog in the blogArray that was chosen for editing
+                                if ( $blogObject->getBlogID() == $chosenBlog->getBlogID() ) {
+
+                                    // retrieve the user ID of the blog post to be edited
+                                    $blogAuthorID = $blogObject->getUser()->getUserID();
+                                }
+                            }
+
+                            // check whether the user is the author of the blog post
+                            if( $blogAuthorID !== $loggedInUser->getUserID() ) {
+                                // the user is not the author of the chosen blog post -> editing is prevented
+                                debugError('The user is not the author of this post and may not alter the blog post.');	
+
+                                $info = 'You have no permission to edit this post.';
+
+                            } else {
+                                // the user is the author of the chosen blog post -> editing is allowed
+                                debugSuccess('The user is confirmed to be the author of this post.');
+
+                                $showEdit = true;
+                            }
+
+                         #************ START DELETION PROCESS *************#
+
+                        } elseif( $operation === 'delete' ) {
+                            debugProcessStart('Starting deletion process...');
+
+                            #********* USER AUTHORIZATION **********#
+
+                            foreach( $blogObjectsArray AS $blogObject ) {
+
+                                // find the blog in the blogArray that was chosen for deletion
+                                if ( $blogObject->getBlogID() == $chosenBlog->getBlogID() ) {
+
+                                    // retrieve the user ID of the blog post to be deleted
+                                    $blogAuthorID       = $blogObject->getUser()->getUserID();
+                                    $blogTitleToDelete  = $blogObject->getBlogHeadline();
+                                }
+                            }
+
+                            // check whether the user is the author of the blog post
+                            if( $blogAuthorID !== $loggedInUser->getUserID() ) {
+                                // the user is not the author of the chosen blog post -> deletion is prevented
+                                debugError('The blog post was not deleted because the user is not the author.');	
+
+                                $info = 'You have no permission to delete this post.';
+
+                            } else {
+                                // the user is the author of the chosen blog post -> deletion is allowed
+                                debugSuccess('The user is confirmed to be the author of this post.');
+
+                                // store blog ID of the post to be deleted in session
+                                $_SESSION['postToBeDeleted'] = $chosenBlog->getBlogID();
+
+                                $alert = "Do you really want to delete the blog post $blogTitleToDelete?";
+
+                            } // USER AUTHORIZATION END
+
+                        } // PROCESS OPERATIONS END
+                    
+                    } // FINAL FORM VALIDATION END
+
+                } // PROCESS VIEW & EDIT FORM END
 
 #***************************************************************************************#				
 ?>
@@ -612,32 +864,32 @@
                 <div class="blog">
 
                     <!-- -------- Generate blog articles ---------- -->
-                    <?php foreach( $blogArray AS $value): ?>
+                    <?php foreach( $blogObjectsArray AS $blogObject): ?>
 
-                        <?php if( $value['blogID'] == $chosenBlog ): ?>
+                        <?php if( $blogObject->getBlogID() == $chosenBlog->getBlogID() ): ?>
 
-                            <!-- Convert ISO time from DB to EU time and split into date and time -->
-                            <?php $dateArray = isoToEuDateTime( $value['blogDate'] ) ?>
+                            <!-- Convert ISO time from DB to US time and split into date and time -->
+                            <?php $dateArray = isoToUSDateTime( $blogObject->getBlogDate() ) ?>
 
                             <!-- Link to create new post -->
                             <a href="dashboard.php"><< Write a new blog post</a>
 
                             <!-- Blog header -->
-                            <div class="blog-category">Category: <?= $value['catLabel'] ?></div>
-                            <div class="blog-title"><?= $value['blogHeadline'] ?></div>
+                            <div class="blog-category">Category: <?= $blogObject->getCategory()->getCatLabel() ?></div>
+                            <div class="blog-title"><?= $blogObject->getBlogHeadline() ?></div>
                             <div class="blog-meta">
-                                <?= $value['userFirstName'] ?> <?= $value['userLastName'] ?> (<?= $value['userCity'] ?>) 
+                                <?= $blogObject->getUserFullName() ?> (<?= $blogObject->getUser()->getUserCity() ?>) 
                                 wrote on <?= $dateArray['date'] ?> at <?= $dateArray['time'] ?> o'clock:
                             </div>
 
                             <!-- Blog content -->
                             <div class="container clearfix">
                                 <!-- Prevent empty images from displaying --> 
-                                <?php if( $value['blogImagePath'] !== NULL ): ?>
-                                    <img class="<?= $value['blogImageAlignment']?>" src="<?= $value['blogImagePath']?>" alt="image for the blog article">
+                                <?php if( $blogObject->getBlogImagePath() !== NULL ): ?>
+                                    <img class="<?= $blogObject->getBlogImageAlignment() ?>" src="<?= $blogObject->getBlogImagePath() ?>" alt="image for the blog article">
                                 <?php endif ?>
 
-                                <div class="blog-content"><?php echo nl2br( $value['blogContent'] ) ?></div>
+                                <div class="blog-content"><?php echo nl2br( $blogObject->getBlogContent() ) ?></div>
                             </div>
 
                             <br>
@@ -659,9 +911,9 @@
 
                         <!--------------- Edit form loaded for the first time ----------------->
 
-                        <?php foreach( $blogArray AS $value): ?>
+                        <?php foreach( $blogObjectsArray AS $blogObject): ?>
 
-                            <?php if( $value['blogID'] == $chosenBlog ): ?>
+                            <?php if( $blogObject->getBlogID() == $chosenBlog->getBlogID() ): ?>
 
                                 <!-- ------------- EDIT FORM BEGIN ------------------------- -->
 
@@ -673,17 +925,17 @@
                                     <div class="form-heading">Edit blog post</div>
                                     <br>
                                     <input type="hidden" name="editForm">
-                                    <input type="hidden" name="b12" value="<?= $value['blogID'] ?>">
-                                    <input type="hidden" name="b13" value="<?= $value['blogImagePath']?>">
+                                    <input type="hidden" name="b12" value="<?= $blogObject->getBlogID() ?>">
+                                    <input type="hidden" name="b13" value="<?= $blogObject->getBlogImagePath() ?>">
 
                                     <!-- security by obscurity: field names are deliberately chosen to be obscure -->
 
                                     <!-- ------------- Category ------------- -->
                                     <label for="b8">Choose a category</label>
                                     <select name="b8" id="b8" class="form-text">
-                                        <?= $value['catID'] ?>
+                                        <?= $blogObject->getCategory()->getCatID()  ?>
                                         <?php foreach( $allCategoryObjectsArray AS $dbCategoryObject ): ?>
-                                            <option value="<?= $dbCategoryObject->getCatID() ?>" <?php if($dbCategoryObject->getCatID() == $value['catID']) echo 'selected'?>>
+                                            <option value="<?= $dbCategoryObject->getCatID() ?>" <?php if($dbCategoryObject->getCatID() == $blogObject->getCategory()->getCatID()) echo 'selected'?>>
                                                 <?= $dbCategoryObject->getCatLabel() ?>
                                             </option>
                                         <?php endforeach ?>
@@ -692,8 +944,8 @@
                                     <br>
                                     <!-- ------------- Title ---------------- -->
                                     <label for="b9">Write the title of your post</label>
-                                    <div class="error"><?= $errorTitle ?></div>
-                                    <input type="text" class="form-text" name="b9" id="b9" placeholder="Title" value="<?= $value['blogHeadline'] ?>">
+                                    <div class="error"><?= $errorHeadline ?></div>
+                                    <input type="text" class="form-text" name="b9" id="b9" placeholder="Title" value="<?= $blogObject->getBlogHeadline() ?>">
 
                                     <br>
                                     <!-- ------------- Image Upload ---------- -->
@@ -702,8 +954,8 @@
 
                                         <!-- ------------- Database Image ---------- -->
 
-                                        <?php if( $value['blogImagePath'] !== NULL ): ?>
-                                            <img class="left" src="<?= $value['blogImagePath']?>" alt="image for the blog article">
+                                        <?php if( $blogObject->getBlogImagePath() !== NULL ): ?>
+                                            <img class="left" src="<?= $blogObject->getBlogImagePath()?>" alt="image for the blog article">
                                         <?php endif ?>
 
                                         <!-- ------------- Image Info Text ---------- -->
@@ -715,7 +967,7 @@
                                         </p>
                                         <br>
                                         <!-- ------------- Image Upload ---------- -->
-                                        <div class="error"><?= $errorImage ?></div>
+                                        <div class="error"><?= $errorImageUpload ?></div>
                                         <input type="file" name="image">
                                         <br>
                                         <br>
@@ -723,8 +975,8 @@
                                         <label for="b10">Choose the alignment of the image</label>
                                         <br>
                                         <select name="b10" id="b10" class="form-select">
-                                            <option value="left" <?php if( $value['blogImageAlignment'] === 'left') echo 'selected' ?>>Left</option>
-                                            <option value="right" <?php if( $value['blogImageAlignment'] === 'right') echo 'selected' ?>>Right</option>
+                                            <option value="left" <?php if( $blogObject->getBlogImageAlignment() === 'left') echo 'selected' ?>>Left</option>
+                                            <option value="right" <?php if( $blogObject->getBlogImageAlignment() === 'right') echo 'selected' ?>>Right</option>
                                         </select>
                                         <br>
                                     </fieldset>
@@ -733,7 +985,7 @@
                                     <!-- ------------- Content ------------------ -->
                                     <label for="b11">Write your blog post</label>
                                     <div class="error"><?= $errorContent ?></div>
-                                    <textarea name="b11" id="b11" class="textarea" cols="30" rows="25"><?= $value['blogContent'] ?></textarea>
+                                    <textarea name="b11" id="b11" class="textarea" cols="30" rows="25"><?= $blogObject->getBlogContent() ?></textarea>
                                     <br>
                                     <input type="submit" class="form-button" value="Publish">
                                 </form>
@@ -928,9 +1180,9 @@
                     <!-- Blog post title -->
                     <label for="b6">Select a blog post</label>
                     <select name="b6" id="b6" class="form-text">
-                        <?php foreach( $blogArray AS $value ): ?>
-                            <option value="<?= $value['blogID'] ?>">
-                                <?= $value['blogHeadline'] ?>
+                        <?php foreach( $blogObjectsArray AS $blogObject ): ?>
+                            <option value="<?= $blogObject?->getBlogID() ?>">
+                                <?= $blogObject?->getBlogHeadline() ?>
                             </option>
                         <?php endforeach ?>
                     </select>

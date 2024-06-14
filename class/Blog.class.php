@@ -413,7 +413,7 @@
 					}
 
 
-					#********** SAVE TO DB **********#
+					#********** SAVE POST TO DB **********#
 
 					/**
 					 * Saves a new blog entry to the database consisting of a headline,
@@ -446,6 +446,52 @@
 												$this->getCategory()->getCatID(),
 												$this->getUser()->getUserID()
 											);
+
+						// Step 3 DB: Prepared Statements
+
+						try {
+							// Prepare: prepare the SQL-Statement
+							$PDOStatement = $PDO->prepare($sql);
+							
+							// Execute: execute the SQL-Statement and include the placeholder
+							$PDOStatement->execute($placeholders);
+							// showQuery($PDOStatement);
+							
+						} catch(PDOException $error) {
+							debugErrorDB($error);									
+						}
+
+						// Step 4 DB: evaluate the DB-operation and close the DB connection
+
+						$rowCount = $PDOStatement->rowCount();	
+						
+						debugVariable('rowCount', $rowCount);
+
+						return $rowCount;
+					}
+
+
+					#********** DELETE POST FROM DB **********#
+
+					/**
+					 * Deletes a blog entry from the database with a 
+					 * specific ID and returns the number of the deleted 
+					 * entries. 
+					 * 
+					 * @param Object 	$PDO 		database connection
+					 * 
+					 * @return integer 	$rowCount	number of saved entries
+					 */
+
+					public function deleteFromDB(PDO $PDO):int {
+						debugMethod(__METHOD__);
+
+						// Step 2 DB: Create the SQL-Statement and a placeholder-array
+
+						$sql = 'DELETE FROM Blog 
+								WHERE blogID = ?';
+							
+						$placeholders = array( $this->getBlogID() );
 
 						// Step 3 DB: Prepared Statements
 
