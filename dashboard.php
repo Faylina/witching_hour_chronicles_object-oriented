@@ -215,6 +215,7 @@
 					dbClose($PDO);
 
 					#********** FINAL FORM VALIDATION **********#
+
 					if( $errorCategory !== NULL ) {
 						// error
 						debugError('The form contains errors!');
@@ -248,7 +249,7 @@
 							$dbError = 'An error has occurred! Please try again later.';
 					
 							// error message for admin
-							$logErrorForAdmin = 'Error attempting to save a new category.';
+							$logErrorForAdmin = 'Error trying to SAVE a new CATEGORY to database.';
 					
 							#******** WRITE TO ERROR LOG ******#
 					
@@ -288,6 +289,230 @@
 					} // FINAL FORM VALIDATION END
 
 				} // PROCESS FORM 'NEW CATEGORY' END
+
+			
+#***************************************************************************************#
+
+
+				#**********************************************#
+				#********** FETCH CATEGORIES FROM DB **********#
+				#**********************************************#
+
+				debugProcessStart('Fetching category data from database...');
+
+				#****************************************#
+				#********** DB OPERATION ****************#
+				#****************************************#
+
+				// Step 1 DB: Connect to database
+				$PDO = dbConnect();	
+
+				// Step 2 + 3 DB
+
+				$allCategoryObjectsArray = Category::fetchAllFromDB($PDO);
+
+				// Step 4 DB: Disconnect from database
+				dbClose($PDO);
+
+
+#***************************************************************************************#
+
+
+				#***************************************************#
+				#********** PROCESS FORM 'NEW BLOG ENTRY' **********#
+				#***************************************************#
+
+				#********** PREVIEW POST ARRAY **********#
+
+				debugArray('_POST', $_POST);
+				
+				// Step 1 FORM: Check whether the form has been sent
+				if( isset($_POST['articleForm']) === true ) {	
+
+					debugProcessStart('The form "articleForm" has been sent.');
+					
+					// Step 2 FORM: Read, sanitize and output form data
+					debugProcessStart('Reading and sanitizing form data...');
+					
+					#********** CREATE CATEGORY OBJECT **********#
+
+					// $catLabel = NULL, $catID = NULL
+					$category = new Category(catID:$_POST['b1']);
+					
+
+					#********** CREATE BLOG OBJECT **********#
+
+					/*
+						$blogHeadline 		= NULL,
+						$blogImagePath 		= NULL,
+						$blogImageAlignment = NULL,
+						$blogContent 		= NULL,
+						$blogDate 			= NULL,
+						$category 			= new Category(),
+						$user 				= new User(),
+						$blogID 			= NULL
+					*/
+					
+					$newBlog = new Blog(blogHeadline:$_POST['b2'], blogImageAlignment:$_POST['b3'], blogContent:$_POST['b4'], category:$category, user:$loggedInUser); 
+					
+					debugObject('newBlog', $newBlog);
+					
+					// Step 3 FORM: Field validation
+					debugProcessStart('Validating fields...');
+					
+					$errorCategory			= validateInputString($newBlog->getCategory()->getCatID(), maxLength:11);
+					$errorHeadline 			= validateInputString($newBlog->getBlogHeadline());
+					// The image alignment is not mandatory but should return a value either way. It would indicate an error should it return empty.
+					$errorImageAlignment 	= validateInputString($newBlog->getBlogImageAlignment(), minLength:5, maxLength:6);
+					$errorContent 			= validateInputString($newBlog->getBlogContent(), minLength:5, maxLength:20000);
+					
+					#********** WHITELISTING 1: CHECK IF CATEGORY NAME EXISTS IN DATABASE **********#
+
+					if( array_key_exists($newBlog->getCategory()->getCatID(), $allCategoryObjectsArray) === false) {
+						// error
+						debugError('This category does not exist.');
+					
+						$errorCategory = 'This category does not exist.';
+					}
+					
+					#********** WHITELISTING 2: IMAGE ALIGNMENT ***********#
+					
+					if( $newBlog->getBlogImageAlignment() !== 'left' AND $newBlog->getBlogImageAlignment() !== 'right') {
+						// error
+						debugError('Invalid image alignment.');
+					
+						$errorImageAlignment = 'Invalid image alignment.';
+					}
+					
+					#********** FINAL FORM VALIDATION PART I (FIELDS VALIDATION) **********#					
+					if( $errorCategory 			!== NULL OR 
+						$errorHeadline 			!== NULL OR
+						$errorImageAlignment 	!== NULL OR 
+						$errorContent 			!== NULL ) 
+					{
+						// error
+						debugError('FINAL FORM VALIDATION PART I: The form contains errors!');	
+											
+					} else {
+						// success
+						debugSuccess('FINAL FORM VALIDATION PART I: The form is formally free of errors.');	
+					
+						#**************************************************#
+				        #************ OPTIONAL: IMAGE UPLOAD **************#
+				        #**************************************************#
+						debugProcessStart('Checking image upload...');
+											
+						// Check if a file has been uploaded
+						if( $_FILES['image']['tmp_name'] === '' ) {
+
+							debugOccurrence('Image upload is inactive');
+											
+						} else {
+							debugOccurrence('Image upload is active');
+					
+							$validateImageUploadResultArray = validateImageUpload($_FILES['image']['tmp_name']);
+
+							debugArray('validateImageUploadResultArray', $validateImageUploadResultArray);
+
+							#********** VALIDATE IMAGE UPLOAD RESULTS **********#
+							if( $validateImageUploadResultArray['imageError'] !== NULL ) {
+								// error
+								debugError("Image upload error: " . $validatedImageArray['imageError']);	
+
+								$errorImageUpload = $validateImageUploadResultArray['imageError'];
+													
+							} elseif( $validateImageUploadResultArray['imagePath'] !== NULL ) {
+								// success
+								debugSuccess("The image has successfully saved here:" . $validateImageUploadResultArray['imagePath'] . ".");
+					
+								// save image path
+								$newBlog->setBlogImagePath($validateImageUploadResultArray['imagePath']);
+
+								debugObject('newBlog', $newBlog);
+
+							} // VALIDATE IMAGE UPLOAD RESULTS END	
+
+						} // OPTIONAL: FILE UPLOAD END
+
+						#********** FINAL FORM VALIDATION PART II (IMAGE UPLOAD) **********#
+
+						if( $errorImageUpload !== NULL ) {
+							// error
+							debugError("FINAL FORM VALIDATION PART II: Error for image upload: $validateImageUploadResultArray[imageError]");
+										
+						} else {
+							// success
+							debugSuccess('FINAL FORM VALIDATION PART II: The form is completely free of errors.');	
+
+							// Step 4 FORM: data processing
+					
+							#********** SAVE BLOG ENTRY DATA INTO DB **********#
+							debugProcessStart('Saving new blog post to database...');
+					
+							#****************************************#
+							#********** DB OPERATION ****************#
+							#****************************************#
+					
+							// Step 1 DB: Connect to database
+
+							$PDO = dbConnect();
+
+							// Step 2 + 3 DB
+
+							$rowCount = $newBlog->saveToDB($PDO);
+
+							// Step 4 DB: evaluate the DB-operation and close the DB connection
+					
+							if( $rowCount !== 1 ) {
+								// error
+								debugErrorDB("Error when attempting to save $rowCount category!");
+					
+								// error message for user
+								$dbError = 'The blog post could not be saved. Please try again later.';
+					
+								// error message for admin
+                                $logError   = 'Error trying to SAVE a new BLOG POST to database.';
+					
+								#******** WRITE TO ERROR LOG ******#
+					
+								// create file
+
+								if( file_exists('./logfiles') === false ) {
+									mkdir('./logfiles');
+								}
+
+								// create error message
+
+								$logEntry    = "\t<p>";
+								$logEntry   .= date('Y-m-d | h:i:s |');
+								$logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+								$logEntry   .= '<i>' . $logErrorForAdmin . '</i>';
+								$logEntry   .= "</p>\n";
+					
+								// write error message to log
+
+								file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+														
+							} else {
+								// success
+								$newBlog->setBlogID($PDO->lastInsertId());
+												
+								debugSuccess("$rowCount blog post has been saved to the database.");
+
+                                $dbSuccess = "A new blog post has been saved.";
+													
+								// clear the form
+								$newBlog = NULL;
+													
+							} // SAVE BLOG ENTRY INTO DB END
+
+							dbClose($PDO);
+
+						} // FINAL FORM VALIDATION PART II (IMAGE UPLOAD) END
+
+					} // FINAL FORM VALIDATION PART I (FIELDS VALIDATION) END
+
+				} // PROCESS FORM 'NEW BLOG ENTRY' END
 
 #***************************************************************************************#				
 ?>
@@ -457,9 +682,9 @@
                                     <label for="b8">Choose a category</label>
                                     <select name="b8" id="b8" class="form-text">
                                         <?= $value['catID'] ?>
-                                        <?php foreach( $categoryArray AS $dbCategory ): ?>
-                                            <option value="<?= $dbCategory['catID'] ?>" <?php if($dbCategory['catID'] == $value['catID']) echo 'selected'?>>
-                                                <?= $dbCategory['catLabel'] ?>
+                                        <?php foreach( $allCategoryObjectsArray AS $dbCategoryObject ): ?>
+                                            <option value="<?= $dbCategoryObject->getCatID() ?>" <?php if($dbCategoryObject->getCatID() == $value['catID']) echo 'selected'?>>
+                                                <?= $dbCategoryObject->getCatLabel() ?>
                                             </option>
                                         <?php endforeach ?>
                                     </select>
@@ -614,18 +839,22 @@
                     <!-- ------------- Category ------------- -->
                     <label for="b1">Choose a category</label>
                     <select name="b1" id="b1" class="form-text">
-                        <?php foreach( $categoryArray AS $value ): ?>
-                            <option value="<?= $value['catID'] ?>" <?php if($value['catID'] == $category) echo 'selected'?>>
-                                <?= $value['catLabel'] ?>
-                            </option>
-                        <?php endforeach ?>
+						<?php if( empty($allCategoryObjectsArray) === false ): ?>	
+							<?php foreach( $allCategoryObjectsArray AS $categoryObject ): ?>
+								<option value="<?= $categoryObject->getCatID() ?>" <?php if($categoryObject->getCatID() == $newBlog?->getCategory()->getCatID()) echo 'selected'?>>
+									<?= $categoryObject->getCatLabel() ?>
+								</option>
+							<?php endforeach ?>
+						<?php else: ?>
+							<option value='' class="error">Please create a category first. </option>			
+						<?php endif ?>
                     </select>
 
                     <br>
                     <!-- ------------- Title ---------------- -->
-                    <label for="b2">Write the title of your post</label>
-                    <div class="error"><?= $errorTitle ?></div>
-                    <input type="text" class="form-text" name="b2" id="b2" placeholder="Title" value="<?= $title ?>">
+                    <label for="b2">Write the headline of your post</label>
+                    <div class="error"><?= $errorHeadline ?></div>
+                    <input type="text" class="form-text" name="b2" id="b2" placeholder="Title" value=" <?= $newBlog?->getBlogHeadline() ?>">
 
                     <br>
                     <!-- ------------- Image Upload ---------- -->
@@ -641,7 +870,7 @@
                         </p>
                         <br>
                         <!-- ------------- Image Upload ---------- -->
-                        <div class="error"><?= $errorImage ?></div>
+                        <div class="error"><?= $errorImageUpload ?></div>
                         <input type="file" name="image">
                         <br>
                         <br>
@@ -649,8 +878,8 @@
                         <label for="b3">Choose the alignment of the image</label>
                         <br>
                         <select name="b3" id="b3" class="form-select">
-                            <option value="left" <?php if( $alignment === 'left') echo 'selected' ?>>Left</option>
-                            <option value="right" <?php if( $alignment === 'right') echo 'selected' ?>>Right</option>
+                            <option value="left" <?php if( $newBlog?->getBlogImageAlignment() === 'left') echo 'selected' ?>>Left</option>
+                            <option value="right" <?php if( $newBlog?->getBlogImageAlignment() === 'right') echo 'selected' ?>>Right</option>
                         </select>
                         <br>
                     </fieldset>
@@ -659,7 +888,7 @@
                     <!-- ------------- Content ------------------ -->
                     <label for="b4">Write your blog post</label>
                     <div class="error"><?= $errorContent ?></div>
-                    <textarea name="b4" id="b4" class="textarea" cols="30" rows="25"><?= $content ?></textarea>
+                    <textarea name="b4" id="b4" class="textarea" cols="30" rows="25"><?= $newBlog?->getBlogContent() ?></textarea>
                     <br>
                     <input type="submit" class="form-button" value="Publish">
                 </form>

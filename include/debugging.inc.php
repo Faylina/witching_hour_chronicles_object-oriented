@@ -17,7 +17,7 @@
 				#********** One-time occurrence: **********#
 				function debugOccurrence($occurrence) {
 					if(DEBUG) {
-						echo "<p class='debug'><b>Line " . __LINE__ . "</b>: $occurrence . <i>(" . basename(__FILE__) . ")</i></p>\n";
+						echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: $occurrence . <i>(" . basename(__FILE__) . ")</i></p>\n";
 					}
 				}
 
