@@ -471,6 +471,63 @@
 					}
 
 
+					#********** EDIT POST **********#
+
+					/**
+					 * Edits a blog entry in the the database with a 
+					 * specific ID and returns the number of the edited 
+					 * entries. 
+					 * 
+					 * @param Object 	$PDO 		database connection
+					 * 
+					 * @return integer 	$rowCount	number of updated entries
+					 */
+
+					 public function updateToDB(PDO $PDO):int {
+						debugMethod(__METHOD__);
+
+						// Step 2 DB: Create the SQL-Statement and a placeholder-array
+
+						$sql = 'UPDATE Blog 
+								SET blogHeadline        = ?,
+									blogImagePath       = ?,
+									blogImageAlignment  = ?,
+									blogContent         = ?,
+									catID               = ?
+								WHERE blogID            = ?';
+							
+						$placeholders = array( 	$this->getBlogHeadline(),
+												$this->getBlogImagePath(),
+												$this->getBlogImageAlignment(),
+												$this->getBlogContent(),
+												$this->getCategory()->getCatID(),
+												$this->getBlogID()
+											);
+
+						// Step 3 DB: Prepared Statements
+
+						try {
+							// Prepare: prepare the SQL-Statement
+							$PDOStatement = $PDO->prepare($sql);
+							
+							// Execute: execute the SQL-Statement and include the placeholder
+							$PDOStatement->execute($placeholders);
+							// showQuery($PDOStatement);
+							
+						} catch(PDOException $error) {
+							debugErrorDB($error);									
+						}
+
+						// Step 4 DB: evaluate the DB-operation and close the DB connection
+
+						$rowCount = $PDOStatement->rowCount();	
+						
+						debugVariable('rowCount', $rowCount);
+
+						return $rowCount;
+					}
+
+
 					#********** DELETE POST FROM DB **********#
 
 					/**

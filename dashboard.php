@@ -177,7 +177,9 @@
 							$blogID 			= NULL
 						*/
 
-						$chosenBlog = new Blog(blogID: $_SESSION['postToBeDeleted']);
+						$chosenBlog = new Blog(blogID: $_SESSION['postToBeDeleted']->getBlogID(), blogImagePath: $_SESSION['postToBeDeleted']->getBlogImagePath());
+
+						debugObject('chosenBlog', $chosenBlog);
 
                         #****************************************#
                         #************ DB OPERATIONS *************#
@@ -224,14 +226,51 @@
 
                             file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
 
-                        
                         } else {
                             // success
                             debugSuccess("$rowCount blog post has been successfully deleted.");
                         
                             $dbDeleteSuccess = 'The blog post has been successfully deleted.';
 
-                        }
+							#*********** DELETE OLD IMAGE FROM SERVER ************#
+
+							if($chosenBlog->getBlogImagePath() !== NULL) {
+								if( @unlink( $chosenBlog->getBlogImagePath()) === false ) {
+									// error
+									debugError("Error when attempting to delete the old image at '{$chosenBlog->getBlogImagePath()}'");	
+
+									// error message for admin
+									$logError   = 'Error trying to DELETE an OLD IMAGE from server.';
+
+									/******** WRITE TO ERROR LOG ******/
+
+									// create file
+
+									if( file_exists('./logfiles') === false ) {
+										mkdir('./logfiles');
+									}
+
+									// create error message
+
+									$logEntry    = "\t<p>";
+									$logEntry   .= date('Y-m-d | h:i:s |');
+									$logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+									$logEntry   .= '<i>' . $logError . '</i>';
+									$logEntry   .= "</p>\n";
+
+									// write error message to log
+
+									file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+
+								} else {
+									// success
+									debugSuccess("Old image at '{$chosenBlog->getBlogImagePath()}' has been successfully deleted.");
+
+								} // DELETE OLD IMAGE FROM SERVER END
+
+							} // CHECK IF IMAGE EXISTS END
+
+                        } // EVALUATE DB OPERATION END
                         
                         // close DB connection
                         dbClose($PDO);
@@ -494,6 +533,7 @@
 						#**************************************************#
 				        #************ OPTIONAL: IMAGE UPLOAD **************#
 				        #**************************************************#
+
 						debugProcessStart('Checking image upload...');
 											
 						// Check if a file has been uploaded
@@ -504,23 +544,23 @@
 						} else {
 							debugOccurrence('Image upload is active');
 					
-							$validateImageUploadResultArray = validateImageUpload($_FILES['image']['tmp_name']);
+							$validatedImageArray = validateImageUpload($_FILES['image']['tmp_name']);
 
-							debugArray('validateImageUploadResultArray', $validateImageUploadResultArray);
+							debugArray('validatedImageArray', $validatedImageArray);
 
 							#********** VALIDATE IMAGE UPLOAD RESULTS **********#
-							if( $validateImageUploadResultArray['imageError'] !== NULL ) {
+							if( $validatedImageArray['imageError'] !== NULL ) {
 								// error
 								debugError("Image upload error: " . $validatedImageArray['imageError']);	
 
-								$errorImageUpload = $validateImageUploadResultArray['imageError'];
+								$errorImageUpload = $validatedImageArray['imageError'];
 													
-							} elseif( $validateImageUploadResultArray['imagePath'] !== NULL ) {
+							} elseif( $validatedImageArray['imagePath'] !== NULL ) {
 								// success
-								debugSuccess("The image has successfully saved here:" . $validateImageUploadResultArray['imagePath'] . ".");
+								debugSuccess("The image has successfully saved here:" . $validatedImageArray['imagePath'] . ".");
 					
 								// save image path
-								$newBlog->setBlogImagePath($validateImageUploadResultArray['imagePath']);
+								$newBlog->setBlogImagePath($validatedImageArray['imagePath']);
 
 								debugObject('newBlog', $newBlog);
 
@@ -532,7 +572,7 @@
 
 						if( $errorImageUpload !== NULL ) {
 							// error
-							debugError("FINAL FORM VALIDATION PART II: Error for image upload: $validateImageUploadResultArray[imageError]");
+							debugError("FINAL FORM VALIDATION PART II: Error for image upload: $validatedImageArray[imageError]");
 										
 						} else {
 							// success
@@ -607,6 +647,232 @@
 					} // FINAL FORM VALIDATION PART I (FIELDS VALIDATION) END
 
 				} // PROCESS FORM 'NEW BLOG POST' END
+
+
+#*************************************************************************#
+
+
+
+                #****************************************#
+				#********* PROCESS EDIT FORM ************#
+				#****************************************#
+
+                #********** PREVIEW POST ARRAY **********#
+
+                debugArray('_POST', $_POST);
+
+                // Step 1 FORM: Check whether the form has been sent
+                if( isset($_POST['editForm']) === true ) {
+
+                    debugProcessStart('The form "editForm" has been sent.');
+                    
+                    // Step 2 FORM: Read, sanitize and output form data
+                    debugProcessStart('Reading and sanitizing form data...');
+
+					#********** CREATE CATEGORY OBJECT **********#
+
+					// $catLabel = NULL, $catID = NULL
+					$category = new Category(catID:$_POST['b8']);
+					
+
+					#********** CREATE BLOG OBJECT **********#
+
+					/*
+						$blogHeadline 		= NULL,
+						$blogImagePath 		= NULL,
+						$blogImageAlignment = NULL,
+						$blogContent 		= NULL,
+						$blogDate 			= NULL,
+						$category 			= new Category(),
+						$user 				= new User(),
+						$blogID 			= NULL
+					*/
+					
+					$editedBlog = new Blog(blogHeadline:$_POST['b9'], blogImagePath:$_POST['b13'], blogImageAlignment:$_POST['b10'], blogContent:$_POST['b11'], category:$category, user:$loggedInUser, blogID:$_POST['b12']); 
+					
+					debugObject('editedBlog', $editedBlog);
+
+                    // Step 3 FORM: Field validation
+                    debugProcessStart('Validating fields...');
+
+                    $errorHeadline              = validateInputString( $editedBlog->getBlogHeadline() );
+					$errorEditedImagePath       = validateInputString( $editedBlog->getBlogImagePath(), mandatory:false );
+                    // $alignment is not mandatory but should return a value either way. It would indicate an error should it return empty.
+                    $errorAlignment             = validateInputString( $editedBlog->getBlogImageAlignment(), minLength:4, maxLength:5 );
+                    $errorContent               = validateInputString( $editedBlog->getBlogContent(), maxLength:10000 );
+					$errorCategory              = validateInputString( $editedBlog->getCategory()->getCatID(), maxLength:11 );
+                    $errorEditedBlogID          = validateInputString( $editedBlog->getBlogID(), maxLength:11 );
+
+                    #**************** FINAL FORM VALIDATION 1 *****************#
+
+                    if( $errorHeadline 			!== NULL OR 
+                        $errorEditedImagePath 	!== NULL OR 
+                        $errorAlignment 		!== NULL OR
+                        $errorContent 			!== NULL OR
+                        $errorCategory 			!== NULL OR 
+                        $errorEditedBlogID 		!== NULL ) 
+                    {
+                        // error
+                        debugError('FINAL FORM VALIDATION PART I: The form contains errors!');	
+
+                        $showEdit = true;
+
+                    } else {
+                        // success
+                        debugSuccess('FINAL FORM VALIDATION PART I: The form is formally free of errors.');	
+
+                        #****************************************#
+				        #************ IMAGE UPLOAD **************#
+				        #****************************************#
+
+                        debugProcessStart('Checking image upload...');
+
+                        #************ CHECK IF IMAGE UPLOAD IS ACTIVE **************#
+
+                        if( $_FILES['image']['tmp_name'] === '') {
+                            // image upload is not active
+                            debugOccurrence('Image upload is inactive');
+
+                        } else {
+                            // image upload is active
+                            debugOccurrence('Image upload is active');
+
+                            #************ VALIDATE IMAGE UPLOAD ********************#
+
+                            $validatedImageArray = validateImageUpload( $_FILES['image']['tmp_name'] );
+
+                            debugArray('validatedImageArray', $validatedImageArray);
+
+                            if( $validatedImageArray['imageError'] !== NULL ) {
+                                // error
+                                debugError("Image upload error: " . $validatedImageArray['imageError']);	
+
+                                $errorImageUpload = $validatedImageArray['imageError'];
+
+                            } else {
+                                // success
+                                debugSuccess("The image has successfully saved here:" . $validatedImageArray['imagePath'] . ".");	
+
+                                #*********** DELETE OLD IMAGE FROM SERVER ************#
+
+                                if( @unlink( $editedBlog->getBlogImagePath()) === false ) {
+                                    // error
+                                    debugError("Error when attempting to delete the old image at '{$editedBlog->getBlogImagePath()}'");	
+
+                                    // error message for admin
+                                    $logError   = 'Error trying to DELETE an OLD IMAGE from server.';
+
+                                    /******** WRITE TO ERROR LOG ******/
+
+                                    // create file
+
+                                    if( file_exists('./logfiles') === false ) {
+                                        mkdir('./logfiles');
+                                    }
+
+                                    // create error message
+
+                                    $logEntry    = "\t<p>";
+                                    $logEntry   .= date('Y-m-d | h:i:s |');
+                                    $logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+                                    $logEntry   .= '<i>' . $logError . '</i>';
+                                    $logEntry   .= "</p>\n";
+
+                                    // write error message to log
+
+                                    file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+
+                                } else {
+                                    // success
+                                    debugSuccess("Old image at '{$editedBlog->getBlogImagePath()}' has been successfully deleted.");
+
+                                } // DELETE OLD IMAGE FROM SERVER END
+
+                                $editedBlog->setBlogImagePath($validatedImageArray['imagePath']);
+
+                            } // VALIDATE IMAGE UPLOAD END
+
+                        } // IMAGE UPLOAD END
+
+                        #**************** FINAL FORM VALIDATION 2 (IMAGE UPLOAD VALIDATION) *****************#
+
+                        if( $errorImageUpload !== NULL ) {
+                            // error
+                            debugError("FINAL FORM VALIDATION PART II: Error for image upload: $validatedImageArray[imageError]");
+
+                        } else {
+                            // success
+                            debugSuccess('FINAL FORM VALIDATION PART II: The form is completely free of errors.');
+
+
+                            // Step 4 FORM: data processing
+
+                            #**************** UPLOAD DATA TO DATABASE *****************#
+
+                            debugProcessStart('Updating blog post...');
+
+                            #****************************************#
+				            #************ DB OPERATIONS *************#
+				            #****************************************#
+
+                            // Step 1 DB: Connect to database
+
+                            $PDO = dbConnect();
+
+                            // Step 2 + 3 DB
+
+							$rowCount = $editedBlog->updateToDB($PDO);
+
+							debugVariable('rowCount', $rowCount);
+
+                            // Step 4 DB: evaluate the DB-operation and close the DB connection
+
+                            if( $rowCount !== 1 ) {
+                                // error
+                                debugErrorDB('The blog post could not be updated.');
+
+                                // error message for user
+                                $dbError    = 'The blog post could not be updated. Please try again later.';
+
+                                // error message for admin
+                                $logError   = 'Error trying to UPDATE a BLOG POST to database.';
+
+                                /******** WRITE TO ERROR LOG ******/
+
+                                // create file
+
+                                if( file_exists('./logfiles') === false ) {
+                                    mkdir('./logfiles');
+                                }
+
+                                // create error message
+
+                                $logEntry    = "\t<p>";
+                                $logEntry   .= date('Y-m-d | h:i:s |');
+                                $logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+                                $logEntry   .= '<i>' . $logError . '</i>';
+                                $logEntry   .= "</p>\n";
+
+                                // write error message to log
+
+                                file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+
+                            } else {
+                                // success
+                                debugSuccess("$rowCount blog post has been successfully updated.");
+
+                                $dbSuccess = 'Your blog post has been updated.'; 
+
+                            } // UPLOAD DATA TO DATABASE END
+
+                            // close the DB connection
+                            dbClose($PDO);
+
+                        } // FINAL FORM VALIDATION 2 END
+
+                    } // FINAL FORM VALIDATION 1 END
+
+                } // PROCESS EDIT FORM END
 		
 
 #***************************************************************************************#
@@ -739,6 +1005,10 @@
                                     // retrieve the user ID of the blog post to be deleted
                                     $blogAuthorID       = $blogObject->getUser()->getUserID();
                                     $blogTitleToDelete  = $blogObject->getBlogHeadline();
+
+									if($blogObject->getBlogImagePath() !== NULL) {
+                                        $chosenBlog->setBlogImagePath($blogObject->getBlogImagePath());
+                                    } 
                                 }
                             }
 
@@ -754,7 +1024,7 @@
                                 debugSuccess('The user is confirmed to be the author of this post.');
 
                                 // store blog ID of the post to be deleted in session
-                                $_SESSION['postToBeDeleted'] = $chosenBlog->getBlogID();
+                                $_SESSION['postToBeDeleted'] 	= $chosenBlog;
 
                                 $alert = "Do you really want to delete the blog post $blogTitleToDelete?";
 
@@ -933,7 +1203,6 @@
                                     <!-- ------------- Category ------------- -->
                                     <label for="b8">Choose a category</label>
                                     <select name="b8" id="b8" class="form-text">
-                                        <?= $blogObject->getCategory()->getCatID()  ?>
                                         <?php foreach( $allCategoryObjectsArray AS $dbCategoryObject ): ?>
                                             <option value="<?= $dbCategoryObject->getCatID() ?>" <?php if($dbCategoryObject->getCatID() == $blogObject->getCategory()->getCatID()) echo 'selected'?>>
                                                 <?= $dbCategoryObject->getCatLabel() ?>
@@ -1008,18 +1277,17 @@
                             <div class="form-heading">Edit blog post</div>
                             <br>
                             <input type="hidden" name="editForm">
-                            <input type="hidden" name="b12" value="<?= $editedBlogID ?>">
-                            <input type="hidden" name="b13" value="<?= $editedImagePath ?>">
+                            <input type="hidden" name="b12" value="<?= $editedBlog->getBlogID() ?>">
+                            <input type="hidden" name="b13" value="<?= $editedBlog->getBlogImagePath() ?>">
 
                             <!-- security by obscurity: field names are deliberately chosen to be obscure -->
 
                             <!-- ------------- Category ------------- -->
                             <label for="b8">Choose a category</label>
                             <select name="b8" id="b8" class="form-text">
-                                <?= $editedCategory ?>
-                                <?php foreach( $categoryArray AS $dbCategory ): ?>
-                                    <option value="<?= $dbCategory['catID'] ?>" <?php if($dbCategory['catID'] == $editedCategory) echo 'selected'?>>
-                                        <?= $dbCategory['catLabel'] ?>
+                                <?php foreach( $allCategoryObjectsArray AS $dbCategoryObject ): ?>
+                                    <option value="<?= $dbCategoryObject->getCatID() ?>" <?php if($dbCategoryObject->getCatID() == $editedBlog->getCategory()->getCatID()) echo 'selected'?>>
+                                        <?= $dbCategoryObject->getCatLabel() ?>
                                     </option>
                                 <?php endforeach ?>
                             </select>
@@ -1027,8 +1295,8 @@
                             <br>
                             <!-- ------------- Title ---------------- -->
                             <label for="b9">Write the title of your post</label>
-                            <div class="error"><?= $errorTitle ?></div>
-                            <input type="text" class="form-text" name="b9" id="b9" placeholder="Title" value="<?= $editedTitle ?>">
+                            <div class="error"><?= $errorHeadline ?></div>
+                            <input type="text" class="form-text" name="b9" id="b9" placeholder="Title" value="<?= $editedBlog->getBlogHeadline() ?>">
 
                             <br>
                             <!-- ------------- Image Upload ---------- -->
@@ -1037,8 +1305,8 @@
 
                                 <!-- ------------- Database Image ---------- -->
 
-                                <?php if( $editedImagePath !== NULL ): ?>
-                                    <img class="left" src="<?= $editedImagePath ?>" alt="image for the blog article">
+                                <?php if( $editedBlog->getBlogImagePath() !== NULL ): ?>
+                                    <img class="left" src="<?= $editedBlog->getBlogImagePath() ?>" alt="image for the blog article">
                                 <?php endif ?>
 
                                 <!-- ------------- Image Info Text ---------- -->
@@ -1050,7 +1318,7 @@
                                 </p>
                                 <br>
                                 <!-- ------------- Image Upload ---------- -->
-                                <div class="error"><?= $errorImage ?></div>
+                                <div class="error"><?= $errorImageUpload ?></div>
                                 <input type="file" name="image">
                                 <br>
                                 <br>
@@ -1058,8 +1326,8 @@
                                 <label for="b10">Choose the alignment of the image</label>
                                 <br>
                                 <select name="b10" id="b10" class="form-select">
-                                    <option value="left" <?php if( $editedAlignment === 'left') echo 'selected' ?>>Left</option>
-                                    <option value="right" <?php if( $editedAlignment === 'right') echo 'selected' ?>>Right</option>
+                                    <option value="left" <?php if( $editedBlog->getBlogImageAlignment() === 'left') echo 'selected' ?>>Left</option>
+                                    <option value="right" <?php if( $editedBlog->getBlogImageAlignment() === 'right') echo 'selected' ?>>Right</option>
                                 </select>
                                 <br>
                             </fieldset>
@@ -1068,7 +1336,7 @@
                             <!-- ------------- Content ------------------ -->
                             <label for="b11">Write your blog post</label>
                             <div class="error"><?= $errorContent ?></div>
-                            <textarea name="b11" id="b11" class="textarea" cols="30" rows="25"><?= $editedContent ?></textarea>
+                            <textarea name="b11" id="b11" class="textarea" cols="30" rows="25"><?= $editedBlog->getBlogContent() ?></textarea>
                             <br>
                             <input type="submit" class="form-button" value="Publish">
                             </form>
