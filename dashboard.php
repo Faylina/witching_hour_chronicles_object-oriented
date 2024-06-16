@@ -1493,7 +1493,11 @@
                 <ul>
                     <li>Copyright</li> 
                     <li>&copy;</li> 
-                    <li>Faylina 2024</li>
+					<?php if(date('Y') > 2024): ?>
+                        <li>Faylina 2024 - <?= date('Y') ?></li>
+                    <?php else: ?>
+                        <li>Faylina 2024</li>
+                    <?php endif ?>
                 </ul>
             </div>
         </footer>
