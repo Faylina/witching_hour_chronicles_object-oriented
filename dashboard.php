@@ -1376,10 +1376,10 @@
                     </select>
 
                     <br>
-                    <!-- ------------- Title ---------------- -->
+                    <!-- ------------- Headline ---------------- -->
                     <label for="b2">Write the headline of your post</label>
                     <div class="error"><?= $errorHeadline ?></div>
-                    <input type="text" class="form-text" name="b2" id="b2" placeholder="Title" value=" <?= $newBlog?->getBlogHeadline() ?>">
+                    <input type="text" class="form-text" name="b2" id="b2" placeholder="Headline" value="<?= $newBlog?->getBlogHeadline() ?>">
 
                     <br>
                     <!-- ------------- Image Upload ---------- -->
@@ -1413,7 +1413,7 @@
                     <!-- ------------- Content ------------------ -->
                     <label for="b4">Write your blog post</label>
                     <div class="error"><?= $errorContent ?></div>
-                    <textarea name="b4" id="b4" class="textarea" cols="30" rows="25"><?= $newBlog?->getBlogContent() ?></textarea>
+                    <textarea name="b4" id="b4" class="textarea" cols="30" rows="25" placeholder="..."><?= $newBlog?->getBlogContent() ?></textarea>
                     <br>
                     <input type="submit" class="form-button" value="Publish">
                 </form>
