@@ -496,7 +496,7 @@
 					$errorCategory			= validateInputString($newBlog->getCategory()->getCatID(), maxLength:11);
 					$errorHeadline 			= validateInputString($newBlog->getBlogHeadline());
 					// The image alignment is not mandatory but should return a value either way. It would indicate an error should it return empty.
-					$errorImageAlignment 	= validateInputString($newBlog->getBlogImageAlignment(), minLength:5, maxLength:6);
+					$errorImageAlignment 	= validateInputString($newBlog->getBlogImageAlignment(), minLength:4, maxLength:5);
 					$errorContent 			= validateInputString($newBlog->getBlogContent(), minLength:5, maxLength:20000);
 					
 					#********** WHITELISTING 1: CHECK IF CATEGORY NAME EXISTS IN DATABASE **********#
@@ -754,39 +754,42 @@
                                 debugSuccess("The image has successfully saved here:" . $validatedImageArray['imagePath'] . ".");	
 
                                 #*********** DELETE OLD IMAGE FROM SERVER ************#
+								if($editedBlog->getBlogImagePath() !== NULL) {
 
-                                if( @unlink( $editedBlog->getBlogImagePath()) === false ) {
-                                    // error
-                                    debugError("Error when attempting to delete the old image at '{$editedBlog->getBlogImagePath()}'");	
+									if( @unlink( $editedBlog->getBlogImagePath()) === false ) {
+										// error
+										debugError("Error when attempting to delete the old image at '{$editedBlog->getBlogImagePath()}'");	
 
-                                    // error message for admin
-                                    $logError   = 'Error trying to DELETE an OLD IMAGE from server.';
+										// error message for admin
+										$logError   = 'Error trying to DELETE an OLD IMAGE from server.';
 
-                                    /******** WRITE TO ERROR LOG ******/
+										/******** WRITE TO ERROR LOG ******/
 
-                                    // create file
+										// create file
 
-                                    if( file_exists('./logfiles') === false ) {
-                                        mkdir('./logfiles');
-                                    }
+										if( file_exists('./logfiles') === false ) {
+											mkdir('./logfiles');
+										}
 
-                                    // create error message
+										// create error message
 
-                                    $logEntry    = "\t<p>";
-                                    $logEntry   .= date('Y-m-d | h:i:s |');
-                                    $logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
-                                    $logEntry   .= '<i>' . $logError . '</i>';
-                                    $logEntry   .= "</p>\n";
+										$logEntry    = "\t<p>";
+										$logEntry   .= date('Y-m-d | h:i:s |');
+										$logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
+										$logEntry   .= '<i>' . $logError . '</i>';
+										$logEntry   .= "</p>\n";
 
-                                    // write error message to log
+										// write error message to log
 
-                                    file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
+										file_put_contents('./logfiles/error_log.html', $logEntry, FILE_APPEND);
 
-                                } else {
-                                    // success
-                                    debugSuccess("Old image at '{$editedBlog->getBlogImagePath()}' has been successfully deleted.");
+									} else {
+										// success
+										debugSuccess("Old image at '{$editedBlog->getBlogImagePath()}' has been successfully deleted.");
 
-                                } // DELETE OLD IMAGE FROM SERVER END
+									} // DELETE OLD IMAGE FROM SERVER END
+
+								} // CHECK IF IMAGE EXISTS END
 
                                 $editedBlog->setBlogImagePath($validatedImageArray['imagePath']);
 
@@ -1091,32 +1094,34 @@
                     $alert              !== NULL OR 
                     $dbDeleteError      !== NULL OR  
                     $dbDeleteSuccess    !== NULL ): ?>
-            <popupBox>
-                <!-- Message -->
-                <?php if( $dbError ):?>
-                    <h3 class="popup-error"><?= $dbError ?></h3>
-                <?php elseif( $dbSuccess ): ?>
-                    <h3 class="popup-success"><?= $dbSuccess ?></h3>
-                <?php elseif( $dbDeleteError ): ?>
-                    <h3 class="popup-error"><?= $dbDeleteError ?></h3>
-                <?php elseif( $dbDeleteSuccess ): ?>
-                    <h3 class="popup-success"><?= $dbDeleteSuccess ?></h3>
-                <?php elseif( $info ): ?>
-                    <h3 class="popup-error"><?= $info ?></h3>
-                <?php elseif( $alert ): ?>
-                    <h3 class="popup-success"><?= $alert ?></h3>
-                <?php endif ?>
+			<div class="overlay">
+				<popupBox>
+					<!-- Message -->
+					<?php if( $dbError ):?>
+						<h3 class="popup-error"><?= $dbError ?></h3>
+					<?php elseif( $dbSuccess ): ?>
+						<h3 class="popup-success"><?= $dbSuccess ?></h3>
+					<?php elseif( $dbDeleteError ): ?>
+						<h3 class="popup-error"><?= $dbDeleteError ?></h3>
+					<?php elseif( $dbDeleteSuccess ): ?>
+						<h3 class="popup-success"><?= $dbDeleteSuccess ?></h3>
+					<?php elseif( $info ): ?>
+						<h3 class="popup-error"><?= $info ?></h3>
+					<?php elseif( $alert ): ?>
+						<h3 class="popup-success"><?= $alert ?></h3>
+					<?php endif ?>
 
-                <!-- Button -->
-                <?php if( $dbError OR $dbSuccess OR $info ): ?>
-                    <a class="button" onclick="document.getElementsByTagName('popupBox')[0].style.display = 'none'">Okay</a>
-                <?php elseif( $alert ): ?>
-                    <a class="button" href="?action=cancelDelete">Cancel</a>
-                    <a class="button" href="?action=delete">Delete Post</a>
-                <?php elseif( $dbDeleteError OR $dbDeleteSuccess ): ?>
-                    <a class="button" href="?action=okay">Okay</a>
-                <?php endif ?>
-            </popupBox> 
+					<!-- Button -->
+					<?php if( $dbError OR $dbSuccess OR $info ): ?>
+						<a class="button" href="./dashboard.php">Okay</a>
+					<?php elseif( $alert ): ?>
+						<a class="button" href="?action=cancelDelete">Cancel</a>
+						<a class="button" href="?action=delete">Delete Post</a>
+					<?php elseif( $dbDeleteError OR $dbDeleteSuccess ): ?>
+						<a class="button" href="?action=okay">Okay</a>
+					<?php endif ?>
+				</popupBox> 
+			</div>
         <?php endif ?>
 
         <!-- ------------- USER MESSAGE END ------------------------------------ -->
@@ -1237,7 +1242,7 @@
                                         <br>
                                         <!-- ------------- Image Upload ---------- -->
                                         <div class="error"><?= $errorImageUpload ?></div>
-                                        <input type="file" name="image">
+                                        <input type="file" name="image" class="image-button">
                                         <br>
                                         <br>
                                         <!-- ------------- Image Alignment ---------- -->
@@ -1319,7 +1324,7 @@
                                 <br>
                                 <!-- ------------- Image Upload ---------- -->
                                 <div class="error"><?= $errorImageUpload ?></div>
-                                <input type="file" name="image">
+                                <input type="file" name="image" class="image-button">
                                 <br>
                                 <br>
                                 <!-- ------------- Image Alignment ---------- -->
@@ -1347,7 +1352,7 @@
 
             <?php else: ?>
 
-                <!-- ------------- BLOG POST FORM BEGIN ------------------------- -->
+                <!-- ------------- NEW BLOG POST FORM BEGIN ------------------------- -->
 
                 <form class="article-form" action="" method="POST" enctype="multipart/form-data">
                     <div class="form-heading">Write a new blog post</div>
@@ -1391,7 +1396,7 @@
                         <br>
                         <!-- ------------- Image Upload ---------- -->
                         <div class="error"><?= $errorImageUpload ?></div>
-                        <input type="file" name="image">
+                        <input type="file" name="image" class="image-button">
                         <br>
                         <br>
                         <!-- ------------- Image Alignment ---------- -->
@@ -1413,7 +1418,7 @@
                     <input type="submit" class="form-button" value="Publish">
                 </form>
                     
-                <!-- ------------- BLOG POST FORM END ---------------------------- -->
+                <!-- ------------- NEW BLOG POST FORM END ---------------------------- -->
 
             <?php endif ?>
 
