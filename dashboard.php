@@ -1057,6 +1057,15 @@
 
     <body>
 
+        <!-- ------------- LINK TO THE CODING SORCERESS BEGIN ------------------------- -->
+         
+        <div class="coding-sorceress">
+            <a href="../../portfolio.php#projects"><< Go back to The Coding Sorceress</a>
+         </div>
+
+        <!-- ------------- LINK TO THE CODING SORCERESS END --------------------------- -->
+         
+
         <!-- ------------- NAVIGATION BEGIN --------------------------- -->
 
         <nav class="navigation">
