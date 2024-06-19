@@ -24,7 +24,7 @@
 				
 				
 				#********** INCLUDE CLASSES **********#
-				require_once('./class/User.class.php');
+				require_once('./class/Author.class.php');
 				require_once('./class/Category.class.php');
 				require_once('./class/Blog.class.php');
 
@@ -85,53 +85,53 @@
 				#*******************************************************************#
 
 
-				#********** TESTING CONSTRUCTOR AND SETTERS FOR CLASS USER *********#
+				#********** TESTING CONSTRUCTOR AND SETTERS FOR CLASS AUTHOR *********#
 
-				debugProcessStart('Testing empty User object:');
-				$user1 = new User();
+				debugProcessStart('Testing empty Author object:');
+				$author1 = new Author();
 				
-				debugProcessStart('Testing filled User object:');
+				debugProcessStart('Testing filled Author object:');
 
-				//$userFirstName 	= NULL,
-				//$userLastName 	= NULL,
-				//$userEmail 		= NULL,
-				//$userCity 		= NULL,
-				//$userPassword 	= NULL,
-				//$userID 			= NULL
+				//$authorFirstName 	= NULL,
+				//$authorLastName 	= NULL,
+				//$authorEmail 		= NULL,
+				//$authorCity 		= NULL,
+				//$authorPassword 	= NULL,
+				//$authorID 		= NULL
 				
-				$user2 = new User('first name', 'last name', 'email@at.com', 'location', '1234', '5');
+				$author2 = new Author('first name', 'last name', 'email@at.com', 'location', '1234', '5');
 				
-				debugProcessStart('Testing partly filled User object:');
+				debugProcessStart('Testing partly filled Author object:');
 
-				//$userFirstName 	= NULL,
-				//$userLastName 	= NULL,
-				//$userEmail 		= NULL,
-				//$userCity 		= NULL,
-				//$userPassword 	= NULL,
-				//$userID 			= NULL
+				//$authorFirstName 	= NULL,
+				//$authorLastName 	= NULL,
+				//$authorEmail 		= NULL,
+				//$authorCity 		= NULL,
+				//$authorPassword 	= NULL,
+				//$authorID 		= NULL
 				
-				$user3 = new User(userLastName:'last name', userEmail:'email@at.com', userPassword:'1234');
+				$author3 = new Author(authorLastName:'last name', authorEmail:'email@at.com', authorPassword:'1234');
 
 
-				#********** TESTING GETTERS FOR CLASS USER **********#
+				#********** TESTING GETTERS FOR CLASS AUTHOR **********#
 
-				debugProcessStart('Testing empty User object:');
+				debugProcessStart('Testing empty Author object:');
 
-				debugVariable('userFirstName', 	$user1->getUserFirstName());
-				debugVariable('userLastName', 	$user1->getUserLastName());
-				debugVariable('userEmail', 		$user1->getUserEmail());
-				debugVariable('userCity', 		$user1->getUserCity());
-				debugVariable('userPassword', 	$user1->getUserPassword());
-				debugVariable('userID', 		$user1->getUserID());
+				debugVariable('authorFirstName', 	$author1->getAuthorFirstName());
+				debugVariable('authorLastName', 	$author1->getAuthorLastName());
+				debugVariable('authorEmail', 		$author1->getAuthorEmail());
+				debugVariable('authorCity', 		$author1->getAuthorCity());
+				debugVariable('authorPassword', 	$author1->getAuthorPassword());
+				debugVariable('authorID', 			$author1->getAuthorID());
 				
-				debugProcessStart('Testing filled User object:');
+				debugProcessStart('Testing filled Author object:');
 
-				debugVariable('userFirstName', 	$user2->getUserFirstName());
-				debugVariable('userLastName', 	$user2->getUserLastName());
-				debugVariable('userEmail', 		$user2->getUserEmail());
-				debugVariable('userCity', 		$user2->getUserCity());
-				debugVariable('userPassword', 	$user2->getUserPassword());
-				debugVariable('userID', 		$user2->getUserID());
+				debugVariable('authorFirstName', 	$author2->getAuthorFirstName());
+				debugVariable('authorLastName', 	$author2->getAuthorLastName());
+				debugVariable('authorEmail', 		$author2->getAuthorEmail());
+				debugVariable('authorCity', 		$author2->getAuthorCity());
+				debugVariable('authorPassword', 	$author2->getAuthorPassword());
+				debugVariable('authorID', 			$author2->getAuthorID());
 
 				#*******************************************************************#
 
@@ -153,10 +153,10 @@
 				//$blogContent 			= NULL,
 				//$blogDate 			= NULL,
 				//$category 			= new Category(),
-				//$user 				= new User(),
+				//$author 				= new Author(),
 				//$blogID 				= NULL
 				
-				$blog2 = new Blog('Title', 'Path', 'left', 'Lots of text...', 'date', $category2, $user2, '3');
+				$blog2 = new Blog('Title', 'Path', 'left', 'Lots of text...', 'date', $category2, $author2, '3');
 				
 				debugProcessStart('Testing partly filled Blog object:');
 
@@ -166,7 +166,7 @@
 				//$blogContent 			= NULL,
 				//$blogDate 			= NULL,
 				//$category 			= new Category(),
-				//$user 				= new User(),
+				//$author 				= new Author(),
 				//$blogID 				= NULL
 			
 				$blog3 = new Blog(blogContent:'Lots of text...', category:$category2, blogID:'3');
@@ -182,7 +182,7 @@
 				debugVariable('blogContent', 		$blog1->getBlogContent());
 				debugVariable('blogDate', 			$blog1->getBlogDate());
 				debugObject('category', 			$blog1->getCategory());
-				debugObject('user', 				$blog1->getUser());
+				debugObject('author', 				$blog1->getAuthor());
 				debugVariable('blogID', 			$blog1->getBlogID());
 				
 				debugProcessStart('Testing filled Blog object:');
@@ -193,7 +193,7 @@
 				debugVariable('blogContent', 		$blog2->getBlogContent());
 				debugVariable('blogDate', 			$blog2->getBlogDate());
 				debugObject('category', 			$blog2->getCategory());
-				debugObject('user', 				$blog2->getUser());
+				debugObject('author', 				$blog2->getAuthor());
 				debugVariable('blogID', 			$blog2->getBlogID());
 
 				#*******************************************************************#
@@ -218,52 +218,42 @@
 #*******************************************************************************************#
 
 				#************************************#
-				#********** VALIDATE LOGIN **********#
+				#******** SECURE PAGE ACCESS ********#
 				#************************************#
 				
-				session_name("wwwwitchinghourchroniclesobjectcom");
-				
-				
-				#********** START | CONTINUE SESSION **********#
-				if( session_start() === false ) {
+				// secure access only for logged-in users of Coding Sorceress
+                secureAccess('wwwcodingsorceresscom', 'user', '../../index.php');
+
+                // secure access only for logged-in authors of Witching Hour Chronicles	
+
+				#*******************************************#
+				#********** CHECK FOR VALID LOGIN **********#
+				#*******************************************#
+
+				#********** A) NO VALID LOGIN **********#				
+				if( isset($_SESSION['author']) === false OR $_SESSION['IPAddress'] !== $_SERVER['REMOTE_ADDR'] ) {
 					// error
-					debugError('Error starting the session.');				
-									
+					debugAuth('Author is not logged in.');			
+
+					#************ DENY PAGE ACCESS ***********#
+					unset($_SESSION['author']);
+					
+					#************ FLAG AS LOGGED OUT *********#
+					$loggedIn = false;
+				
+				
+				#********** B) VALID LOGIN **********#
 				} else {
 					// success
-					debugSuccess('The session has been started successfully.');		
-
-					#*******************************************#
-					#********** CHECK FOR VALID LOGIN **********#
-					#*******************************************#
-
+					debugAuth('Valid login.');			
+				
+					#************ GENERATE NEW SESSION ID ***********#
+					session_regenerate_id(true);
+							
+					#************ FLAG AS LOGGED IN *****************#
+					$loggedIn = true;
 					
-					#********** A) NO VALID LOGIN **********#				
-					if( isset($_SESSION['user']) === false OR $_SESSION['IPAddress'] !== $_SERVER['REMOTE_ADDR'] ) {
-						// error
-						debugAuth('User is not logged in.');			
-
-						#************ DENY PAGE ACCESS ***********#
-						session_destroy();
-						
-						#************ FLAG AS LOGGED OUT *********#
-						$loggedIn = false;
-					
-					
-					#********** B) VALID LOGIN **********#
-					} else {
-						// success
-						debugAuth('Valid login.');			
-					
-						#************ GENERATE NEW SESSION ID ***********#
-						session_regenerate_id(true);
-								
-						#************ FLAG AS LOGGED IN *****************#
-						$loggedIn = true;
-						
-					} // CHECK FOR VALID LOGIN END
-					
-				} // VALIDATE LOGIN END
+				} // CHECK FOR VALID LOGIN END
 
 
 #*******************************************************************************************#
@@ -288,23 +278,23 @@
 					debugProcessStart('Reading and sanitizing form data...');
 					
 					/*
-						$userFirstName 	= NULL,
-						$userLastName 	= NULL,
-						$userEmail 		= NULL,
-						$userCity 		= NULL,
-						$userPassword 	= NULL,
-						$userID 		= NULL
+						$authorFirstName 	= NULL,
+						$authorLastName 	= NULL,
+						$authorEmail 		= NULL,
+						$authorCity 		= NULL,
+						$authorPassword 	= NULL,
+						$authorID 			= NULL
 					*/
 
-					$userLogin 	= new User(userEmail:$_POST['b1']);
+					$authorLogin 	= new Author(authorEmail:$_POST['b1']);
 					$password 	= sanitizeString($_POST['b2']);
 
-					debugObject('userLogin', $userLogin);
+					debugObject('authorLogin', $authorLogin);
 					
 					// Step 3 FORM: Field validation
 					debugProcessStart('Validating fields...');
 					
-					$errorLoginEmail 		= validateEmail($userLogin->getUserEmail());
+					$errorLoginEmail 		= validateEmail($authorLogin->getAuthorEmail());
 					$errorLoginPassword 	= validateInputString($password);
 					
 					
@@ -313,7 +303,7 @@
 						// error
 						debugError('The login form contains errors!');		
 						
-						// neutral user message
+						// neutral author message
 						$errorLogin = 'Invalid email or password.';
 											
 					} else {
@@ -326,26 +316,26 @@
 						#********** DB OPERATION **********#
 						#**********************************#
 						
-						#********** FETCH USER DATA FROM DB BY EMAIL **********#	
+						#********** FETCH AUTHOR DATA FROM DB BY EMAIL **********#	
 					
 						// Step 1 DB: Connect to database
 						$PDO = dbConnect();
 					
 						// Step 2 + 3 DB 
-						$userObjectFromDB = $userLogin->fetchFromDB($PDO);
+						$authorObjectFromDB = $authorLogin->fetchFromDB($PDO);
 					
 						// Step 4 DB: close DB connection
 						dbClose($PDO);
 
-						debugObject('userObjectFromDB', $userObjectFromDB);
+						debugObject('authorObjectFromDB', $authorObjectFromDB);
 					
 						#********** VERIFY LOGIN EMAIL **********#			
 					
-						if( $userObjectFromDB === false ) {
+						if( $authorObjectFromDB === false ) {
 							// error
 							debugError('The email could not be found in the database!');
 												
-							// neutral user message
+							// neutral author message
 							$errorLogin = 'Invalid email or password.';
 						
 						} else {
@@ -354,64 +344,31 @@
 																			
 							#********** VERIFY PASSWORD **********#
 													
-							if( password_verify( $password, $userObjectFromDB->getUserPassword()) === false ) {
+							if( password_verify( $password, $authorObjectFromDB->getAuthorPassword()) === false ) {
 								// error
 								debugError('The password in the form does not match the password in the database!');
 					
-								// neutral user message
+								// neutral author message
 								$errorLogin = 'Invalid email or password.';
 													
 							} else {
 								// success
 								debugSuccess('The password in the form matches the password in the database.');
+
+								#************ 3. PROCESS LOGIN *************#
+
+                                debugProcessStart('The author is being logged in...');
 																
-								#********** START SESSION **********#
-					
-								if( session_start() === false ) {
-									// error
-									debugError('Error starting session!');		
-					
-									$errorLogin = 'Login is not possible. Please allow cookies in your browser.';
-															
-									// error message for admin
-									$logErrorForAdmin = 'Error during login process.';
-					
-									#******** WRITE TO ERROR LOG ******#
-							
-									// create file
-							
-									if( file_exists('./logdocs') === false ) {
-										mkdir('./logdocs');
-									}
-							
-									// create error message
-							
-									$logEntry    = "\t<p>";
-									$logEntry   .= date('Y-m-d | h:i:s |');
-									$logEntry   .= 'FILE: <i>' . __FILE__ . '</i> |';
-									$logEntry   .= '<i>' . $logErrorForAdmin . '</i>';
-									$logEntry   .= "</p>\n";
-							
-									// put error message into the error log
-							
-									file_put_contents('./logdocs/error_log.html', $logEntry, FILE_APPEND);
-															
-								} else {
-									// success
-									debugSuccess('The session has been started successfully.');		
-																								
-									#********** SAVE USER DATA INTO SESSION **********#
-					
-									debugProcessStart('Writing user data to session...');
-														
-									$_SESSION['IPAddress'] 		= $_SERVER['REMOTE_ADDR'];
-									$_SESSION['user']			= $userObjectFromDB;
-									
-									#********** REDIRECT TO DASHBOARD **********#
+								#********** SAVE AUTHOR DATA INTO SESSION **********#
+				
+								debugProcessStart('Writing author data to session...');
+													
+								$_SESSION['IPAddress'] 		= $_SERVER['REMOTE_ADDR'];
+								$_SESSION['author']			= $authorObjectFromDB;
+								
+								#********** REDIRECT TO DASHBOARD **********#
 
-									header('Location: dashboard.php');
-
-								} // START SESSION END
+								header('Location: dashboard.php');
 
 							} // VERIFY PASSWORD END
 
@@ -477,8 +434,8 @@
 					if( $_GET['action'] === 'logout' ) {
 						debugProcessStart('Logging out...');
 						
-						// 1. Delete session file
-						session_destroy();
+						// 1. Delete session for Witching Hour Chronicles
+                        unset($_SESSION['author']);
 
 						// 2. Reload homepage
 						header("Location: index.php");
@@ -653,7 +610,7 @@
 						<div class="blog-category">Category: <?= $blogObject->getCategory()->getCatLabel() ?></div>
 						<div class="blog-title"><?= $blogObject->getBlogHeadline() ?></div>
 						<div class="blog-meta">
-							<?= $blogObject->getUserFullName() ?> (<?= $blogObject->getUser()->getUserCity() ?>) 
+							<?= $blogObject->getAuthorFullName() ?> (<?= $blogObject->getAuthor()->getAuthorCity() ?>) 
 							wrote on <?= $dateArray['date'] ?> at <?= $dateArray['time'] ?> o'clock:
 						</div>
 

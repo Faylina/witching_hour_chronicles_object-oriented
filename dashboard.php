@@ -24,7 +24,7 @@
 				
 				
 				#********** INCLUDE CLASSES **********#
-				require_once('./class/User.class.php');
+				require_once('./class/Author.class.php');
 				require_once('./class/Category.class.php');
 				require_once('./class/Blog.class.php');
 
@@ -34,53 +34,43 @@
 				#********** SECURE PAGE ACCESS **********#
 				#****************************************#				
 
-				session_name('wwwwitchinghourchroniclesobjectcom');
-				
-				#********** START | CONTINUE SESSION	**********#
+				// secure access only for logged-in users of Coding Sorceress
+                secureAccess('wwwcodingsorceresscom', 'user', '../../index.php');
 
-				if( session_start() === false ) {
-					// error
-					debugError('Error starting the session.');			
-									
-				} else {
-					// success
-					debugSuccess('The session has been started successfully.');							
+                // secure access only for logged-in authors of Witching Hour Chronicles						
 
-					#*******************************************#
-					#********** CHECK FOR VALID LOGIN **********#
-					#*******************************************#	
-					
+                #*******************************************#
+                #********** CHECK FOR VALID LOGIN **********#
+                #*******************************************#	
 
-					#********** A) NO VALID LOGIN **********#
-					if( isset($_SESSION['user']) === false OR $_SESSION['IPAddress'] !== $_SERVER['REMOTE_ADDR'] ) {
-						// error
-						debugAuth('User is not logged in.');	
+                #********** A) NO VALID LOGIN **********#
+                if( isset($_SESSION['author']) === false OR $_SESSION['IPAddress'] !== $_SERVER['REMOTE_ADDR'] ) {
+                    // error
+                    debugAuth('Author is not logged in.');	
 
-						#********** DENY PAGE ACCESS **********#
+                    #********** DENY PAGE ACCESS **********#
 
-						// 1. Delete session file
-						session_destroy();
-						
-						// 2. Redirect to homepage
-						header('LOCATION: index.php');
-						
-						// 3. Fallback in case of an error: end processing of the script
-						exit();
-					
-					#********** B) VALID LOGIN **********#
-					} else {
-						// success
-						debugAuth('Valid login.');				
+                    // 1. Delete session for Witching Hour Chronicles
+                    unset($_SESSION['author']);
+                    
+                    // 2. Redirect to homepage
+                    header('LOCATION: index.php');
+                    
+                    // 3. Fallback in case of an error: end processing of the script
+                    exit();
+                
+                #********** B) VALID LOGIN **********#
+                } else {
+                    // success
+                    debugAuth('Valid login.');				
 
-						session_regenerate_id(true);						
-						
-						// fetch user data from session
+                    session_regenerate_id(true);						
+                    
+                    // fetch author data from session
 
-						$loggedInUser = $_SESSION['user'];
-						
-					} // CHECK FOR VALID LOGIN END
-
-				} // SECURE PAGE ACCESS END
+                    $loggedInAuthor = $_SESSION['author'];
+                    
+                } // CHECK FOR VALID LOGIN END
 
 
 #***************************************************************************************#	
@@ -148,8 +138,8 @@
 					if( $_GET['action'] === 'logout' ) {
 						debugProcessStart('Logging out...');
 
-						// 1. Delete session file
-						session_destroy();
+						// 1. Delete session for Witching Hour Chronicles
+                        unset($_SESSION['author']);
 
 						// 2. Reload homepage
 						header("Location: index.php");
@@ -173,7 +163,7 @@
 							$blogContent 		= NULL,
 							$blogDate 			= NULL,
 							$category 			= new Category(),
-							$user 				= new User(),
+							$author 			= new Author(),
 							$blogID 			= NULL
 						*/
 
@@ -200,7 +190,7 @@
                             // error
                             debugErrorDB('Deletion failed!');	
                         
-                            // error message for user
+                            // error message for author
                             $dbDeleteError = 'The blog post could not be deleted. Please try again later.';
 
                             // error message for admin
@@ -482,11 +472,11 @@
 						$blogContent 		= NULL,
 						$blogDate 			= NULL,
 						$category 			= new Category(),
-						$user 				= new User(),
+						$author 			= new Author(),
 						$blogID 			= NULL
 					*/
 					
-					$newBlog = new Blog(blogHeadline:$_POST['b2'], blogImageAlignment:$_POST['b3'], blogContent:$_POST['b4'], category:$category, user:$loggedInUser); 
+					$newBlog = new Blog(blogHeadline:$_POST['b2'], blogImageAlignment:$_POST['b3'], blogContent:$_POST['b4'], category:$category, author:$loggedInAuthor); 
 					
 					debugObject('newBlog', $newBlog);
 					
@@ -601,7 +591,7 @@
 								// error
 								debugErrorDB("Error when attempting to save $rowCount category!");
 					
-								// error message for user
+								// error message for author
 								$dbError = 'The blog post could not be saved. Please try again later.';
 					
 								// error message for admin
@@ -684,11 +674,11 @@
 						$blogContent 		= NULL,
 						$blogDate 			= NULL,
 						$category 			= new Category(),
-						$user 				= new User(),
+						$author 			= new Author(),
 						$blogID 			= NULL
 					*/
 					
-					$editedBlog = new Blog(blogHeadline:$_POST['b9'], blogImagePath:$_POST['b13'], blogImageAlignment:$_POST['b10'], blogContent:$_POST['b11'], category:$category, user:$loggedInUser, blogID:$_POST['b12']); 
+					$editedBlog = new Blog(blogHeadline:$_POST['b9'], blogImagePath:$_POST['b13'], blogImageAlignment:$_POST['b10'], blogContent:$_POST['b11'], category:$category, author:$loggedInAuthor, blogID:$_POST['b12']); 
 					
 					debugObject('editedBlog', $editedBlog);
 
@@ -834,7 +824,7 @@
                                 // error
                                 debugErrorDB('The blog post could not be updated.');
 
-                                // error message for user
+                                // error message for author
                                 $dbError    = 'The blog post could not be updated. Please try again later.';
 
                                 // error message for admin
@@ -967,27 +957,27 @@
                         } elseif( $operation === 'edit' ) {
                             debugProcessStart('Starting editing process...');
 
-                            #********* USER AUTHORIZATION **********#
+                            #********* AUTHOR AUTHORIZATION **********#
 
                             foreach( $blogObjectsArray AS $blogObject ) {
 
                                 // find the blog in the blogArray that was chosen for editing
                                 if ( $blogObject->getBlogID() == $chosenBlog->getBlogID() ) {
 
-                                    // retrieve the user ID of the blog post to be edited
-                                    $blogAuthorID = $blogObject->getUser()->getUserID();
+                                    // retrieve the author ID of the blog post to be edited
+                                    $blogAuthorID = $blogObject->getAuthor()->getAuthorID();
                                 }
                             }
 
-                            // check whether the user is the author of the blog post
-                            if( $blogAuthorID !== $loggedInUser->getUserID() ) {
-                                // the user is not the author of the chosen blog post -> editing is prevented
+                            // check whether the author is also the author of the blog post
+                            if( $blogAuthorID !== $loggedInAuthor->getAuthorID() ) {
+                                // the author is not the author of the chosen blog post -> editing is prevented
                                 debugError('The user is not the author of this post and may not alter the blog post.');	
 
                                 $info = 'You have no permission to edit this post.';
 
                             } else {
-                                // the user is the author of the chosen blog post -> editing is allowed
+                                // the author is also the author of the chosen blog post -> editing is allowed
                                 debugSuccess('The user is confirmed to be the author of this post.');
 
                                 $showEdit = true;
@@ -998,15 +988,15 @@
                         } elseif( $operation === 'delete' ) {
                             debugProcessStart('Starting deletion process...');
 
-                            #********* USER AUTHORIZATION **********#
+                            #********* AUTHOR AUTHORIZATION **********#
 
                             foreach( $blogObjectsArray AS $blogObject ) {
 
                                 // find the blog in the blogArray that was chosen for deletion
                                 if ( $blogObject->getBlogID() == $chosenBlog->getBlogID() ) {
 
-                                    // retrieve the user ID of the blog post to be deleted
-                                    $blogAuthorID       = $blogObject->getUser()->getUserID();
+                                    // retrieve the author ID of the blog post to be deleted
+                                    $blogAuthorID       = $blogObject->getAuthor()->getAuthorID();
                                     $blogTitleToDelete  = $blogObject->getBlogHeadline();
 
 									if($blogObject->getBlogImagePath() !== NULL) {
@@ -1015,8 +1005,8 @@
                                 }
                             }
 
-                            // check whether the user is the author of the blog post
-                            if( $blogAuthorID !== $loggedInUser->getUserID() ) {
+                            // check whether the author is also the author of the blog post
+                            if( $blogAuthorID !== $loggedInAuthor->getAuthorID() ) {
                                 // the user is not the author of the chosen blog post -> deletion is prevented
                                 debugError('The blog post was not deleted because the user is not the author.');	
 
@@ -1031,7 +1021,7 @@
 
                                 $alert = "Do you really want to delete the blog post $blogTitleToDelete?";
 
-                            } // USER AUTHORIZATION END
+                            } // AUTHOR AUTHORIZATION END
 
                         } // PROCESS OPERATIONS END
                     
@@ -1088,14 +1078,14 @@
             <img class="logo" src="./css/images/logo.png" alt="Parchment paper with a teal quill, a full moon in the background">
             <div class="title">
                 <h1>Witching Hour Chronicles</h1>
-                <div class="active-user">Happy writing, <?= $loggedInUser->getUserFullName() ?>!</div>
+                <div class="active-user">Happy writing, <?= $loggedInAuthor->getAuthorFullName() ?>!</div>
             </div>
 
         </header>
         <!-- ------------- HEADER END ---------------------------------- -->
 
 
-        <!-- ------------- USER MESSAGE BEGIN ---------------------------------- -->
+        <!-- ------------- AUTHOR MESSAGE BEGIN ---------------------------------- -->
 
         <?php if(   $dbError            !== NULL OR 
                     $dbSuccess          !== NULL OR 
@@ -1133,7 +1123,7 @@
 			</div>
         <?php endif ?>
 
-        <!-- ------------- USER MESSAGE END ------------------------------------ -->
+        <!-- ------------- AUTHOR MESSAGE END ------------------------------------ -->
 
 
         <!-- ------------- MAIN CONTENT BEGIN ---------------------------------- -->
@@ -1162,7 +1152,7 @@
                             <div class="blog-category">Category: <?= $blogObject->getCategory()->getCatLabel() ?></div>
                             <div class="blog-title"><?= $blogObject->getBlogHeadline() ?></div>
                             <div class="blog-meta">
-                                <?= $blogObject->getUserFullName() ?> (<?= $blogObject->getUser()->getUserCity() ?>) 
+                                <?= $blogObject->getAuthorFullName() ?> (<?= $blogObject->getAuthor()->getAuthorCity() ?>) 
                                 wrote on <?= $dateArray['date'] ?> at <?= $dateArray['time'] ?> o'clock:
                             </div>
 

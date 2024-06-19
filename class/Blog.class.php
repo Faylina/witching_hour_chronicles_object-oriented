@@ -24,7 +24,7 @@
 				 * contains an image, also the path to the image as 
 				 * well as its alignment. 
 				 * Moreover, this class a Category object with a 
-				 * category ID and label and a User object with the
+				 * category ID and label and a Author object with the
 				 * name, email address, location, ID and password.
 				 */
 
@@ -83,9 +83,9 @@
 					private $category;
 
 					/**
-					 * @var Object (User)
+					 * @var Object (Author)
 					 */
-					private $user;
+					private $author;
 
 					#*************************************************#
 					
@@ -96,7 +96,7 @@
 
 					/**
 					 * @construct Creates a blog object with a headline, image path, image alignment,
-					 * content, date of publishing, ID and the objects Category and User.
+					 * content, date of publishing, ID and the objects Category and Author.
 					 * 
 					 * @param NULL|string 			$blogHeadline 		= NULL				headline
 					 * @param NULL|string 			$blogImagePath 		= NULL				image path
@@ -104,7 +104,7 @@
 					 * @param NULL|string 			$blogContent 		= NULL				content
 					 * @param NULL|string 			$blogDate 			= NULL				date of publishing
 					 * @param Object				$category 			= new Category()	Category object
-					 * @param Object				$user 				= new User()		User object
+					 * @param Object				$author 			= new Author()		Author object
 					 * @param NULL|string|integer 	$blogID 			= NULL				blog ID
 					 * 
 					 * @return void
@@ -116,13 +116,13 @@
 												$blogContent 		= NULL,
 												$blogDate 			= NULL,
 												$category 			= new Category(),
-												$user 				= new User(),
+												$author 			= new Author(),
 												$blogID 			= NULL)  
 					{
 						debugConstructorInvoke(__METHOD__);	
 
 						$this->setCategory($category);
-						$this->setUser($user);
+						$this->setAuthor($author);
 
 						if($blogHeadline 		!== '' AND $blogHeadline 		!== NULL) $this->setBlogHeadline ($blogHeadline);
 						if($blogImagePath 		!== '' AND $blogImagePath 		!== NULL) $this->setBlogImagePath($blogImagePath);
@@ -242,29 +242,29 @@
 					}
 
 
-					#********** USER **********#
+					#********** AUTHOR **********#
 
-					public function getUser():NULL|User {
-						return $this->user;
+					public function getAuthor():NULL|Author {
+						return $this->author;
 					}
 
-					public function setUser(User $value):void {
-						$this->user = $value;
+					public function setAuthor(Author $value):void {
+						$this->author = $value;
 					}
 
 
 					#********** DELEGATION **********#
 
-					#********** USER FULL NAME ******#
+					#********** AUTHOR FULL NAME ******#
 
 					/**
-					 * returns the first and last name of the user
+					 * returns the first and last name of the author
 					 * 
 					 * @return NULL|string 		output: first name last name
 					 */
 
-					public function getUserFullName():NULL|string {
-						return $this->getUser()->getUserFullName();
+					public function getAuthorFullName():NULL|string {
+						return $this->getAuthor()->getAuthorFullName();
 					}
 					
 					
@@ -279,7 +279,7 @@
 
 					/**
 					 * Fetches blog data and the respective category and 
-					 * user data from the database and returns an array
+					 * author data from the database and returns an array
 					 * of Blog objects that contain a full blog post
 					 * respectively.
 					
@@ -293,7 +293,7 @@
 					 * 
 					 * @return Array 		$blogObjectsArray			array consisting of Blog objects,
 					 * 													including the integrated Category
-					 * 													and User objects or alternatively
+					 * 													and Author objects or alternatively
 					 * 													an empty array if no data exists.
 					 */
 
@@ -313,7 +313,7 @@
 							For both cases we need a basic sql statement:
 						*/
 						$sql = 	'SELECT * FROM Blog 
-								 INNER JOIN User USING(userID)
+								 INNER JOIN Author USING(authorID)
 								 INNER JOIN Category USING(catID)';
 						
 						// case a) No condition and therefore no placeholder needed
@@ -370,21 +370,21 @@
 							// $catLabel = NULL, $catID = NULL
 							$category = new Category($resultSet['catLabel'], $resultSet['catID']);
 
-							#******* CREATE USER OBJECT ********#
+							#******* CREATE AUTHOR OBJECT ********#
 							/*
-								$userFirstName 	= NULL,
-								$userLastName 	= NULL,
-								$userEmail 		= NULL,
-								$userCity 		= NULL,
-								$userPassword 	= NULL,
-								$userID 		= NULL
+								$authorFirstName 	= NULL,
+								$authorLastName 	= NULL,
+								$authorEmail 		= NULL,
+								$authorCity 		= NULL,
+								$authorPassword 	= NULL,
+								$authorID 			= NULL
 							*/
-							$user = new User(	$resultSet['userFirstName'], 
-												$resultSet['userLastName'], 
-												$resultSet['userEmail'], 
-												$resultSet['userCity'], 
-												$resultSet['userPassword'], 
-												$resultSet['userID']);
+							$author = new Author(	$resultSet['authorFirstName'], 
+													$resultSet['authorLastName'], 
+													$resultSet['authorEmail'], 
+													$resultSet['authorCity'], 
+													$resultSet['authorPassword'], 
+													$resultSet['authorID']);
 
 							#******* CREATE BLOG OBJECT ********#
 							/*
@@ -394,7 +394,7 @@
 								$blogContent 		= NULL,
 								$blogDate 			= NULL,
 								$category 			= new Category(),
-								$user 				= new User(),
+								$author 			= new Author(),
 								$blogID 			= NULL
 							*/
 							$blogObjectsArray[$resultSet['blogID']] = new Blog(	$resultSet['blogHeadline'], 
@@ -403,7 +403,7 @@
 																				$resultSet['blogContent'], 
 																				$resultSet['blogDate'],
 																				$category, 
-																				$user, 
+																				$author, 
 																				$resultSet['blogID']);
 						} // CREATE OBJECT ARRAY END
 
@@ -417,7 +417,7 @@
 
 					/**
 					 * Saves a new blog entry to the database consisting of a headline,
-					 * the content, a Category and User ID, image alignment and path
+					 * the content, a Category and Author ID, image alignment and path
 					 * and returns the number of the saved entries. 
 					 * 
 					 * @param Object 	$PDO 		database connection
@@ -436,7 +436,7 @@
 								 blogImageAlignment, 
 								 blogContent, 
 								 catID, 
-								 userID)
+								 authorID)
 								VALUES (?, ?, ?, ?, ?, ?) ';
 							
 						$placeholders = array( 	$this->getBlogHeadline(),
@@ -444,7 +444,7 @@
 												$this->getBlogImageAlignment(),
 												$this->getBlogContent(),
 												$this->getCategory()->getCatID(),
-												$this->getUser()->getUserID()
+												$this->getAuthor()->getAuthorID()
 											);
 
 						// Step 3 DB: Prepared Statements
